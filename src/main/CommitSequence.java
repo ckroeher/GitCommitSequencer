@@ -41,55 +41,95 @@ public class CommitSequence extends ArrayList<String> {
     
     private Logger logger = Logger.getInstance();
     
+    private ProcessUtilities processUtilities = ProcessUtilities.getInstance();
+    
     private File repositoryDirectory;
+    
+    private ISequenceStorage sequenceStorage;
 
     /**
      * Constructs a new {@link CommitSequence} instance.
      * 
-     * @param startCommit the {@link String} representing the commit starting this sequence (the newest commit)
      * @param repositoryDirectory the {@link File} denoting the repository (directory) the given start commit belongs to
+     * @param sequenceStorage the {@link ISequenceStorage} to add this and all other (sub-)sequences to
      */
-    public CommitSequence(String startCommit, File repositoryDirectory) {
-        logger.log(ID, "New commit sequence",
-                "Start commit: \"" + startCommit + "\"\nRepository: \"" + repositoryDirectory.getAbsolutePath() + "\"",
+    public CommitSequence(File repositoryDirectory, ISequenceStorage sequenceStorage) {
+        logger.log(ID, "New commit sequence", "Repository: \"" + repositoryDirectory.getAbsolutePath() + "\"",
                 MessageType.INFO);
         this.repositoryDirectory = repositoryDirectory;
-        this.add(startCommit);
-        addParent(startCommit);
+        this.sequenceStorage = sequenceStorage;
     }
     
     /**
-     * TODO.
+     * Starts the actual creation of Git commit sequences and adds itself to the {@link ISequenceStorage} passed to the
+     * constructor of this class after that creation is finished.
      * 
-     * @param currentCommit TODO
+     * @param startCommit the {@link String} representing the commit starting this sequence (the newest commit)
      */
-    private void addParent(String currentCommit) {
-        String[] currentParentCommitCommand = ProcessUtilities.getInstance().extendCommand(GIT_PARENT_COMMIT_COMMAND,
-                currentCommit);
-        ExecutionResult executionResult = ProcessUtilities.getInstance().executeCommand(currentParentCommitCommand,
-                repositoryDirectory);
-        if (executionResult.executionSuccessful()) {
-            String fullParentCommitString = executionResult.getStandardOutputData().trim();
-            if (!fullParentCommitString.isBlank()) {                
-                if (fullParentCommitString.contains(" ")) {
-                    // Multiple parents
-                    String[] parentCommits = fullParentCommitString.split(" ");
-                    this.add(parentCommits[0]);
-                    System.out.println(parentCommits[0]);
-                    addParent(parentCommits[0]);
-                    // TODO use parentCommits[1]ff as new start commits for new sequences
-                    // TODO how to relate these new sequences with parentCommits[0] as anchor?
+    public void run(String startCommit) {
+        logger.log(ID, "Start sequence creation", "Start commit: \"" + startCommit + "\"",
+                MessageType.INFO);
+//        this.add(startCommit);
+//        addParent(startCommit);
+        createSequence(startCommit);
+        sequenceStorage.add(this);
+    }
+    
+    private void createSequence(String currentCommit) {
+        if (currentCommit != null && !currentCommit.isBlank()) {            
+            // Add the current commit to this sequence
+            this.add(currentCommit);
+            // Get all possible parents of the current commit
+            String[] currentCommitParents = getParents(currentCommit);
+            // Proceed with parent commits, if available; otherwise we are finished with this sequence
+            if (currentCommitParents != null) {
+                // Proceed with parent commits depending on their number
+                if (currentCommitParents.length == 1) {
+                    // There is only a single parent commit; call this method again with that commit
+                    createSequence(currentCommitParents[0]);
                 } else {
-                    // Single parent
-                    this.add(fullParentCommitString);
-                    System.out.println(fullParentCommitString);
-                    addParent(fullParentCommitString);
+                    /*
+                     * There are multiple parent commits; the first parent commit is the parent commit within this
+                     * sequence, while the other parent commits represent another branch and, hence, another sequence.
+                     * 
+                     * Hence, for each of the other parent commits, create a new commit sequence and add the current
+                     * commits of this sequence to them before starting their actual process.
+                     */
+                    CommitSequence newCommitSequence;
+                    for (int i = 1; i < currentCommitParents.length; i++) {
+                        newCommitSequence = cloneThis();
+                        newCommitSequence.run(currentCommitParents[i]);
+                    }
+                    // Proceed with this sequence
+                    createSequence(currentCommitParents[0]);
                 }
             }
-        } else {
-            logger.log(ID, "Retrieving parent commit for \"" + currentCommit + "\" failed",
-                    executionResult.getErrorOutputData(), MessageType.ERROR);
         }
+    }
+    
+    private String[] getParents(String childCommit) {
+        String[] parentCommits = null;
+        String[] parentCommitsCommand = processUtilities.extendCommand(GIT_PARENT_COMMIT_COMMAND, childCommit);
+        ExecutionResult parentCommitsCommandResult = processUtilities.executeCommand(parentCommitsCommand,
+                repositoryDirectory);
+        if (parentCommitsCommandResult.executionSuccessful()) {
+            String parentCommitsString = parentCommitsCommandResult.getStandardOutputData().trim();
+            if (!parentCommitsString.isBlank()) {
+                parentCommits = parentCommitsString.split(" ");
+            }
+        } else {
+            logger.log(ID, "Retrieving parent commits for \"" + childCommit + "\" failed",
+                    parentCommitsCommandResult.getErrorOutputData(), MessageType.ERROR);
+        }
+        return parentCommits;
+    }
+    
+    private CommitSequence cloneThis() {
+        CommitSequence clonedSequence = new CommitSequence(repositoryDirectory, sequenceStorage);
+        for (String commit : this) {
+            clonedSequence.add(commit);
+        }
+        return clonedSequence;
     }
     
 }

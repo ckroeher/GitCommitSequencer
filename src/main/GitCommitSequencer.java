@@ -15,6 +15,8 @@
 package main;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
 import utilities.Logger;
 import utilities.Logger.MessageType;
@@ -27,7 +29,7 @@ import utilities.ProcessUtilities.ExecutionResult;
  * @author Christian Kroeher
  *
  */
-public class GitCommitSequencer {
+public class GitCommitSequencer implements ISequenceStorage {
 
     private static final String ID = "GitCommitSequencer";
     
@@ -36,6 +38,8 @@ public class GitCommitSequencer {
     private Logger logger = Logger.getInstance();
     
     private File repositoryDirectory;
+    
+    private List<CommitSequence> commitSequenceList;
     
     /**
      * Constructs a new {@link GitCommitSequencer} instance.
@@ -46,6 +50,7 @@ public class GitCommitSequencer {
     private GitCommitSequencer(String[] args) {
         String repositoryDirectoryString = "C:\\Users\\kroeher\\Data\\Repositories\\DevOpt@TUC";
         repositoryDirectory = new File(repositoryDirectoryString);
+        commitSequenceList = new ArrayList<CommitSequence>();
     }
 
     /**
@@ -53,9 +58,18 @@ public class GitCommitSequencer {
      */
     private void run() {
         String startCommit = getStartCommit();
-        CommitSequence commitSequence = new CommitSequence(startCommit, repositoryDirectory);
-        logger.log(ID, "Sequencing finished", "Number of commits in sequence: " + commitSequence.size(),
-                MessageType.INFO);
+        CommitSequence commitSequence = new CommitSequence(repositoryDirectory, this);
+        commitSequence.run(startCommit);
+        
+        System.out.println("\n\nNumber of sequences: " + commitSequenceList.size());
+        for (int i = 0; i < commitSequenceList.size(); i++) {
+            System.out.println("Sequence " + i);
+            CommitSequence cs = commitSequenceList.get(i);
+            for (String commit : cs) {
+                System.out.println(commit);
+            }
+            System.out.println("");
+        }
     }
     
     /**
@@ -83,6 +97,11 @@ public class GitCommitSequencer {
     public static void main(String[] args) {
         GitCommitSequencer sequencer = new GitCommitSequencer(args);
         sequencer.run();
+    }
+
+    @Override
+    public void add(CommitSequence commitSequence) {
+        commitSequenceList.add(commitSequence);
     }
     
 }
