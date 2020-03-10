@@ -12,7 +12,7 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package utilities;
+package net.ssehub.gcs.utilities;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -20,7 +20,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 
-import utilities.Logger.MessageType;
+import net.ssehub.gcs.utilities.Logger.MessageType;
 
 /**
  * This class provides utility methods for executing commands as external {@link Process} and returning corresponding

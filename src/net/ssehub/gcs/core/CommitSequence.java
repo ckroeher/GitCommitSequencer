@@ -12,15 +12,15 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package main;
+package net.ssehub.gcs.core;
 
 import java.io.File;
 import java.util.ArrayList;
 
-import utilities.Logger;
-import utilities.Logger.MessageType;
-import utilities.ProcessUtilities;
-import utilities.ProcessUtilities.ExecutionResult;
+import net.ssehub.gcs.utilities.Logger;
+import net.ssehub.gcs.utilities.ProcessUtilities;
+import net.ssehub.gcs.utilities.Logger.MessageType;
+import net.ssehub.gcs.utilities.ProcessUtilities.ExecutionResult;
 
 /**
  * This class represents a particular sequence of commits in the order from newest to oldest.
