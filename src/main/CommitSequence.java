@@ -30,51 +30,88 @@ import utilities.ProcessUtilities.ExecutionResult;
  */
 public class CommitSequence extends ArrayList<String> {
     
+    /**
+     * The identifier of this class, e.g., for printing messages.
+     */
     private static final String ID = "CommitSequence";
 
     /**
-     * The serial version UID of this class.
+     * The serial version UID of this class required by the extended {@link ArrayList}.
      */
     private static final long serialVersionUID = -1350039576783309464L;
     
+    /**
+     * The constant part of the command for printing the parent commit(s) to console. The commit (SHA), for which
+     * the parent commit(s) shall be printed, must be appended.<br>
+     * <br>
+     * Command: <code>git log --pretty=%P -1</code> 
+     */
     private static final String[] GIT_PARENT_COMMIT_COMMAND = {"git", "log", "--pretty=%P", "-1"};
     
+    /**
+     * The {@link Logger} for pretty-printing messages to the console.
+     */
     private Logger logger = Logger.getInstance();
     
-    private ProcessUtilities processUtilities = ProcessUtilities.getInstance();
+    /**
+     * The {@link ProcessUtilities} for retrieving Git information, like the available commits and their data, via the
+     * execution of external processes.
+     */
+    private ProcessUtilities processUtilities;
     
+    /**
+     * The {@link File} denoting the root directory of the Git repository from which this commit sequence shall be
+     * created. 
+     */
     private File repositoryDirectory;
     
+    /**
+     * The {@link ISequenceStorage} to which this commit sequence will be stored.
+     */
     private ISequenceStorage sequenceStorage;
 
     /**
      * Constructs a new {@link CommitSequence} instance.
      * 
-     * @param repositoryDirectory the {@link File} denoting the repository (directory) the given start commit belongs to
-     * @param sequenceStorage the {@link ISequenceStorage} to add this and all other (sub-)sequences to
+     * @param repositoryDirectory the {@link File} denoting the repository (directory) from which this commit sequence
+     *        shall be created; should never be <code>null</code> and always needs to be an <i>existing directory</i>
+     * @param sequenceStorage the {@link ISequenceStorage} to add this and all other (sub-)sequences to; should never be
+     *        <code>null</code>
      */
     public CommitSequence(File repositoryDirectory, ISequenceStorage sequenceStorage) {
         logger.log(ID, "New commit sequence", "Repository: \"" + repositoryDirectory.getAbsolutePath() + "\"",
                 MessageType.INFO);
+        processUtilities = ProcessUtilities.getInstance();
+        
         this.repositoryDirectory = repositoryDirectory;
         this.sequenceStorage = sequenceStorage;
     }
     
     /**
-     * Starts the actual creation of Git commit sequences and adds itself to the {@link ISequenceStorage} passed to the
-     * constructor of this class after that creation is finished.
+     * Starts the creation of this commit sequence as well as all sub-sequences and adds them to the
+     * {@link ISequenceStorage} passed to the constructor of this class.
      * 
-     * @param startCommit the {@link String} representing the commit starting this sequence (the newest commit)
+     * @param startCommit the {@link String} representing the commit (SHA) starting this sequence (the newest commit);
+     *        passing <code>null</code> or a <i>blank</i> string terminates the creation immediately resulting in a
+     *        potentially empty commit sequence
      */
     public void run(String startCommit) {
         logger.log(ID, "Start sequence creation", "Start commit: \"" + startCommit + "\"",
                 MessageType.INFO);
-//        this.add(startCommit);
-//        addParent(startCommit);
         createSequence(startCommit);
         sequenceStorage.add(this);
     }
     
+    /**
+     * Creates this commit sequence as well as all sub-sequences resulting from branches in the repository in a
+     * recursive manner: the given commit will be added to this sequence, the parents will be determined (resulting in
+     * potential sub-sequences, of multiple parents are available),and the first of that parents will be input to
+     * another call of this method.
+     * 
+     * @param currentCommit the {@link String} representing the commit (SHA) to add to this sequence and for which the
+     *        parents will be determined; passing <code>null</code> or a <i>blank</i> string terminates the creation
+     *        immediately resulting in a potentially empty commit sequence
+     */
     private void createSequence(String currentCommit) {
         if (currentCommit != null && !currentCommit.isBlank()) {            
             // Add the current commit to this sequence
@@ -107,6 +144,14 @@ public class CommitSequence extends ArrayList<String> {
         }
     }
     
+    /**
+     * Determines the parent commit(s) of the given commit by calling the {@link #GIT_PARENT_COMMIT_COMMAND}.
+     * 
+     * @param childCommit the {@link String} representing the commit (SHA) for which the parent commit(s) shall be
+     *        returned; should never <code>null</code> nor <i>blank</i> 
+     * @return the {@link String} array containing all parent commit(s) (SHAs) of the given commit; may be
+     *         <code>null</code>, if retrieving the parent commit(s) fails or there are no parent commit(s)
+     */
     private String[] getParents(String childCommit) {
         String[] parentCommits = null;
         String[] parentCommitsCommand = processUtilities.extendCommand(GIT_PARENT_COMMIT_COMMAND, childCommit);
@@ -124,6 +169,12 @@ public class CommitSequence extends ArrayList<String> {
         return parentCommits;
     }
     
+    /**
+     * Creates a clone of this commit sequence by creating a new {@link CommitSequence} instance and adding all commits
+     * of this sequence to it.
+     * 
+     * @return the {@link CommitSequence} representing a clone of this one
+     */
     private CommitSequence cloneThis() {
         CommitSequence clonedSequence = new CommitSequence(repositoryDirectory, sequenceStorage);
         for (String commit : this) {
