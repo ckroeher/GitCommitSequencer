@@ -49,6 +49,14 @@ public class CommitSequence extends ArrayList<String> {
     private static final String[] GIT_PARENT_COMMIT_COMMAND = {"git", "log", "--pretty=%P", "-1"};
     
     /**
+     * The constant part of the command for printing the commit information to console. The commit (SHA), for which
+     * the information shall be printed, must be appended.<br>
+     * <br>
+     * Command: <code>git show</code> 
+     */
+    private static final String[] GIT_SHOW_COMMAND = {"git", "show"};
+    
+    /**
      * The {@link Logger} for pretty-printing messages to the console.
      */
     private Logger logger = Logger.getInstance();
@@ -96,10 +104,31 @@ public class CommitSequence extends ArrayList<String> {
      *        potentially empty commit sequence
      */
     public void run(String startCommit) {
-        logger.log(ID, "Start sequence creation", "Start commit: \"" + startCommit + "\"",
-                MessageType.INFO);
-        createSequence(startCommit);
-        sequenceStorage.add(this);
+        if (commitAvailable(startCommit)) {            
+            logger.log(ID, "Start sequence creation", "Start commit: \"" + startCommit + "\"", MessageType.INFO);
+            createSequence(startCommit);
+            sequenceStorage.add(this);
+        } else {
+            logger.log(ID, "The commit \"" + startCommit + "\" is not available in \"" 
+                    + repositoryDirectory.getAbsolutePath() + "\"", null, MessageType.ERROR);
+        }
+    }
+    
+    /**
+     * Checks whether the given commit (SHA) is available in the repository denoted by the current
+     * {@link #repositoryDirectory} using the {@link #GIT_SHOW_COMMAND}.
+     * 
+     * @param commit the {@link String} representing the commit (SHA), which shall be checked for availability
+     * @return <code>true</code>, if the given commit is available; <code>false</code> otherwise
+     */
+    private boolean commitAvailable(String commit) {
+        boolean commitAvailable = false;
+        if (commit != null && !commit.isBlank()) {
+            String[] showCommitCommand = processUtilities.extendCommand(GIT_SHOW_COMMAND, commit);
+            ExecutionResult result = processUtilities.executeCommand(showCommitCommand, repositoryDirectory);
+            commitAvailable = result.executionSuccessful();
+        }
+        return commitAvailable;
     }
     
     /**
