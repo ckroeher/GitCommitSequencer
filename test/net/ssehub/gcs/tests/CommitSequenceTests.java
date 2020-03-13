@@ -16,8 +16,6 @@ package net.ssehub.gcs.tests;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.io.File;
-
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -29,38 +27,20 @@ import net.ssehub.gcs.core.CommitSequence;
  * @author Christian Kroeher
  *
  */
-public class CommitSequenceTests {
-    
-    /**
-     * The {@link String} denoting the root directory of the repository from which commit sequences shall be created in
-     * the tests defined in this class.
-     */
-    private static final String TEST_REPOSITORY_DIRECTORY_STRING = "./testdata";
+public class CommitSequenceTests extends AbstractCommitSequenceTest {
     
     /**
      * The {@link String} denoting the commit (SHA) to start the commit sequence(s) from.
      */
-    private static final String TEST_START_COMMIT = "1";
+    private static final String TEST_START_COMMIT = "b6d0c1b366770dee3c28ef8a01169992d85680e2";
 
     /**
-     * The {@link TestSequenceStorage} for storing the created {@link CommitSequence}s during the tests in this class.
-     */
-    private static TestSequenceStorage sequenceStorage;
-    
-    /**
-     * Prepares the unit tests in this class by creating the commit sequences and storing them into the
-     * {@link #sequenceStorage}.
+     * Prepares the unit tests in this class by calling {@link AbstractCommitSequenceTest#setUp(String)} passing
+     * the {@link #TEST_START_COMMIT}.
      */
     @BeforeClass
     public static void setUp() {
-        File testRepositoryDirectory = new File(TEST_REPOSITORY_DIRECTORY_STRING);
-        if (testRepositoryDirectory.exists() && testRepositoryDirectory.isDirectory()) {
-            sequenceStorage = new TestSequenceStorage();
-            CommitSequence commitSequence = new CommitSequence(testRepositoryDirectory, sequenceStorage);
-            commitSequence.run(TEST_START_COMMIT);
-        } else {
-            System.err.println("\"" + TEST_REPOSITORY_DIRECTORY_STRING + "\" does not exist or is not a directory");
-        }
+        setUp(TEST_START_COMMIT);
     }
     
     /**
