@@ -51,9 +51,26 @@ public class TestSequenceStorage implements ISequenceStorage {
 
     /**
      * Returns the number of commit sequences in this storage.
+     * 
      * @return the number of commit sequences in this storage; at least <i>0</i>
      */
     public int getNumberOfCommitSequences() {
         return commitSequenceList.size();
+    }
+    
+    /**
+     * Returns the {@link CommitSequence} at the given index in this storage.
+     * 
+     * @param index the index of the {@link CommitSequence} in this storage to return; must be greater than or equal to
+     *        <i>0</i> and less than {@link #getNumberOfCommitSequences()} 
+     * @return the {@link CommitSequence} at the given index in this storage or <code>null</code>, if the given index is
+     *         out of range
+     */
+    public CommitSequence getCommitSequence(int index) {
+        CommitSequence commitSequence = null;
+        if (index >= 0 && index < commitSequenceList.size()) {
+            commitSequence = commitSequenceList.get(index);
+        }
+        return commitSequence;
     }
 }
