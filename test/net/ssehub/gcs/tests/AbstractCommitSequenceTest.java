@@ -39,12 +39,14 @@ public abstract class AbstractCommitSequenceTest {
      *        never be <code>null</code> nor <i>blank</i> 
      */
     protected static void setUp(String startCommit) {
+        System.out.println("Creating commit sequences based on start commit \"" + startCommit + "\"");
         File testRepositoryDirectory = AllTests.getTestRepository();
         if (testRepositoryDirectory != null) {
             if (testRepositoryDirectory.exists() && testRepositoryDirectory.isDirectory()) {
                 sequenceStorage = new TestSequenceStorage();
                 CommitSequence commitSequence = new CommitSequence(testRepositoryDirectory, sequenceStorage);
                 commitSequence.run(startCommit);
+                System.out.println("Creation successful");
             } else {
                 System.err.println("Test repository \"" + testRepositoryDirectory.getAbsolutePath() 
                         + "\" does not exist or is not a directory");
