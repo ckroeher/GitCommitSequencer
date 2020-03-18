@@ -14,7 +14,6 @@
  */
 package net.ssehub.gcs.tests;
 
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.BufferedOutputStream;
@@ -85,59 +84,95 @@ public class AllTests {
     @BeforeClass
     public static void globalSetUp() {
         System.out.println("#### Global Test Setup ####");
-        
         // Check if the archive file containing the test repository is available
-        assertTrue("\"" + TESTDATA_REPOSITORY_ARCHIVE_FILE.getAbsolutePath() + "\" does not exist or is not a file",
-                (TESTDATA_REPOSITORY_ARCHIVE_FILE.exists() && TESTDATA_REPOSITORY_ARCHIVE_FILE.isFile()));
-        
-        // Check if the destination of the rest repository already exists; delete it in that case
-        testRepository = new File(TESTDATA_INPUT_DIRECTORY, TESTDATA_REPOSITORY_DIRECTORY_NAME);
-        if (testRepository.exists()) {
-            delete(testRepository);
+        if (TESTDATA_REPOSITORY_ARCHIVE_FILE.exists() && TESTDATA_REPOSITORY_ARCHIVE_FILE.isFile()) {
+            // Check if the destination of the test repository already exists; delete it in that case
+            testRepository = new File(TESTDATA_INPUT_DIRECTORY, TESTDATA_REPOSITORY_DIRECTORY_NAME);
+            if (testRepository.exists() && !delete(testRepository)) {
+                assertTrue(false); // Force termination, if deletion fails
+            }
+            // Extract the test repository
+            if (extractTestRepository()) {
+                // Check if the test repository exists (was extracted)
+                if (testRepository.exists() && testRepository.isDirectory()) {
+                    System.out.println("Extraction successful; test repository \"" + testRepository.getAbsolutePath() 
+                            + "\" available");
+                } else {
+                    System.err.println("Test repository \"" + testRepository.getAbsolutePath() 
+                            + "\" does not exist or is not a directory");
+                    assertTrue(false); // Force termination, if test repository is no available after extraction
+                }
+            } else {
+                System.err.println("Extraction of test repository from archive \"" 
+                        + TESTDATA_REPOSITORY_ARCHIVE_FILE.getAbsolutePath() + "\" failed");
+                assertTrue(false); // Force termination, if extraction of test repository failed
+            }
+
+        } else {
+            System.err.println("Test resository archive \"" + TESTDATA_REPOSITORY_ARCHIVE_FILE.getAbsolutePath() 
+                    + "\" does not exist or is not a file");
+            assertTrue(false); // Force termination, if the archive file containing the test repository does not exist
         }
-       
-        // Extract the directory (repository) and its files to the destination ("testRepository")
+        System.out.println("#### Global Test Setup ####\n");
+    }
+    
+    /**
+     * Extracts the content of the test repository archive denoted by {@link #TESTDATA_REPOSITORY_ARCHIVE_FILE} to the 
+     * {@link #TESTDATA_INPUT_DIRECTORY}. The result is the availability of the {@link #testRepository}.
+     *  
+     * @return <code>true</code>, if extracting each entry in the {@link #TESTDATA_REPOSITORY_ARCHIVE_FILE} was
+     *         successful; <code>false</code> otherwise
+     */
+    private static boolean extractTestRepository() {
+        boolean extractedSuccessful = true;
         FileInputStream fileInputStream = null;
         ZipInputStream zipInputStream = null;
         try {
             fileInputStream = new FileInputStream(TESTDATA_REPOSITORY_ARCHIVE_FILE.getAbsolutePath());
             zipInputStream = new ZipInputStream(fileInputStream);
             ZipEntry zipEntry;
+            System.out.println("Extracting test repository from archive \"" 
+                    + TESTDATA_REPOSITORY_ARCHIVE_FILE.getAbsolutePath() + "\"");
             while ((zipEntry = zipInputStream.getNextEntry()) != null) {
-                assertTrue("Extraction of \"" + zipEntry.getName() + "\" from \"" 
-                        + TESTDATA_REPOSITORY_ARCHIVE_FILE.getAbsolutePath() + "\" failed", 
-                        extract(zipEntry, zipInputStream, TESTDATA_INPUT_DIRECTORY));
+                if (!extract(zipEntry, zipInputStream, TESTDATA_INPUT_DIRECTORY)) {
+                    System.err.println("Extraction of \"" + zipEntry.getName() 
+                            + "\" from test repository archive failed");
+                    extractedSuccessful = false;
+                }
             }
         } catch (FileNotFoundException | SecurityException e) {
-            assertNull("Could not create file input stream for file \"" 
-                    + TESTDATA_REPOSITORY_ARCHIVE_FILE.getAbsolutePath() + "\"", e);
+            extractedSuccessful = false;
+            System.err.println("Creation of file input stream for file \"" 
+                    + TESTDATA_REPOSITORY_ARCHIVE_FILE.getAbsolutePath() + "\" failed");
+            e.printStackTrace();
         } catch (IOException e) {
-            assertNull("Could not read entry from zip file \"" + TESTDATA_REPOSITORY_ARCHIVE_FILE.getAbsolutePath()
-                    + "\"", e);
+            extractedSuccessful = false;
+            System.err.println("Reading entry from archive \"" + TESTDATA_REPOSITORY_ARCHIVE_FILE.getAbsolutePath()
+                    + "\" failed");
+            e.printStackTrace();
         } finally {
             if (zipInputStream != null) {
                 try {
                     zipInputStream.close();
                 } catch (IOException e) {
-                    assertNull("Could not close zip input stream for file \"" 
-                            + TESTDATA_REPOSITORY_ARCHIVE_FILE.getAbsolutePath() + "\"", e);
+                    extractedSuccessful = false;
+                    System.err.println("Closing zip input stream for file \"" 
+                            + TESTDATA_REPOSITORY_ARCHIVE_FILE.getAbsolutePath() + "\" failed");
+                    e.printStackTrace();
                 }
             }
             if (fileInputStream != null) {
                 try {
                     fileInputStream.close();
                 } catch (IOException e) {
-                    assertNull("Could not close file input stream for file \"" 
-                            + TESTDATA_REPOSITORY_ARCHIVE_FILE.getAbsolutePath() + "\"", e);
+                    extractedSuccessful = false;
+                    System.err.println("Closing file input stream for file \"" 
+                            + TESTDATA_REPOSITORY_ARCHIVE_FILE.getAbsolutePath() + "\" failed");
+                    e.printStackTrace();
                 }
             }
         }
-        
-        // Check if the test repository exists (was extracted)
-        assertTrue("\"" + testRepository.getAbsolutePath() + "\" does not exist or is not a directory",
-                (testRepository.exists() && testRepository.isDirectory()));
-        
-        System.out.println("#### Global Test Setup ####");
+        return extractedSuccessful;
     }
     
     /**
@@ -169,12 +204,15 @@ public class AllTests {
                     }
                     extractedSuccessful = true;
                 } catch (IOException e) {
+                    System.err.println("Writing archive entry \"" + zipEntryFile.getAbsolutePath() + "\" failed");
                     e.printStackTrace();
                 } finally {
                     if (zipEntryBufferedOutputStream != null) {                        
                         try {
                             zipEntryBufferedOutputStream.close();
                         } catch (IOException e) {
+                            System.err.println("Closing buffered output stream for archive entry \"" 
+                                    + zipEntryFile.getAbsolutePath() + "\" failed");
                             e.printStackTrace();
                         }
                     }
@@ -182,6 +220,8 @@ public class AllTests {
                         try {
                             zipEntryFileOutputStream.close();
                         } catch (IOException e) {
+                            System.err.println("Closing file output stream for archive entry \""
+                                    + zipEntryFile.getAbsolutePath() + "\" failed");
                             e.printStackTrace();
                         }
                     }
@@ -196,9 +236,18 @@ public class AllTests {
      */
     @AfterClass
     public static void globalTearDown() {
+        System.out.println("\n#### Global Test Teardown ####");
         if (testRepository != null && testRepository.exists()) {
-            delete(testRepository);
+            System.out.println("Deleting \"" + testRepository.getAbsolutePath() + "\"");
+            if (delete(testRepository)) {
+                System.out.println("Deletion successful");
+            } else {
+                System.err.println("Deletion failed");
+            }
+        } else {
+            System.err.println("Deleting test repository failed; repository does not exist");
         }
+        System.out.println("#### Global Test Teardown ####");
     }
     
     /**
@@ -214,6 +263,9 @@ public class AllTests {
             File[] nestedFiles = file.listFiles();
             for (int i = 0; i < nestedFiles.length; i++) {
                 deletionSuccessful = delete(nestedFiles[i]);
+                if (!deletionSuccessful) {
+                    System.err.println("Cannot delete \"" + nestedFiles[i].getAbsolutePath() + "\"");
+                }
             }
         }
         deletionSuccessful = file.delete();

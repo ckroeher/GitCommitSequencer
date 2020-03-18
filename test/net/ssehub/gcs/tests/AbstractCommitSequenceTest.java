@@ -40,15 +40,17 @@ public abstract class AbstractCommitSequenceTest {
      */
     protected static void setUp(String startCommit) {
         File testRepositoryDirectory = AllTests.getTestRepository();
-        if (testRepositoryDirectory != null 
-                && testRepositoryDirectory.exists() 
-                && testRepositoryDirectory.isDirectory()) {
-            sequenceStorage = new TestSequenceStorage();
-            CommitSequence commitSequence = new CommitSequence(testRepositoryDirectory, sequenceStorage);
-            commitSequence.run(startCommit);
+        if (testRepositoryDirectory != null) {
+            if (testRepositoryDirectory.exists() && testRepositoryDirectory.isDirectory()) {
+                sequenceStorage = new TestSequenceStorage();
+                CommitSequence commitSequence = new CommitSequence(testRepositoryDirectory, sequenceStorage);
+                commitSequence.run(startCommit);
+            } else {
+                System.err.println("Test repository \"" + testRepositoryDirectory.getAbsolutePath() 
+                        + "\" does not exist or is not a directory");
+            }
         } else {
-            System.err.println("\"" + testRepositoryDirectory.getAbsolutePath() 
-                    + "\" does not exist or is not a directory");
+            System.err.println("Test repository is not available; run \"AllTests\" instead of single tests");
         }
     }
 
