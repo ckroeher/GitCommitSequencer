@@ -58,6 +58,8 @@ public class GitCommitSequencer implements ISequenceStorage {
      */
     private List<CommitSequence> commitSequenceList;
     
+    // TODO: also calculate shortest and longest sequence
+    
     /**
      * Constructs a new {@link GitCommitSequencer} instance.
      * 
