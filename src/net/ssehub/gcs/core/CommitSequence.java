@@ -212,4 +212,20 @@ public class CommitSequence extends ArrayList<String> {
         return clonedSequence;
     }
     
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String toString() {
+        String commitSequenceString = "";
+        if (!this.isEmpty()) {
+            StringBuilder commitSequenceStringBuilder = new StringBuilder();
+            for (String commit : this) {
+                commitSequenceStringBuilder.append(commit);
+                commitSequenceStringBuilder.append(System.lineSeparator());
+            }
+            commitSequenceString = commitSequenceStringBuilder.toString();
+        }
+        return commitSequenceString;
+    }
 }
