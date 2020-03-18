@@ -57,12 +57,16 @@ public class CommitSequence extends ArrayList<String> {
     private static final String[] GIT_SHOW_COMMAND = {"git", "show"};
     
     /**
-     * The {@link CommitSequence} instance counter to identify individual commit sequences. The value is initialized
-     * with <i>0</i> and will be increased by <i>1</i> every time
-     * {@link CommitSequence#CommitSequence(File, ISequenceStorage)} is called. Hence, the first instance has a sequence
-     * number of <i>1</i>.
+     * The {@link CommitSequence} instance counter. The value is initialized with <i>0</i> and will be increased by
+     * <i>1</i> every time {@link CommitSequence#CommitSequence(File, ISequenceStorage)} is called. Hence, the first
+     * instance has a sequence number of <i>1</i>.
      */
-    private static int sequenceNumber = 0;
+    private static int instanceCounter = 0;
+    
+    /**
+     * The running number of this {@link CommitSequence} instance.
+     */
+    private int sequenceNumber;
     
     /**
      * The {@link Logger} for pretty-printing messages to the console.
@@ -95,7 +99,8 @@ public class CommitSequence extends ArrayList<String> {
      *        <code>null</code>
      */
     public CommitSequence(File repositoryDirectory, ISequenceStorage sequenceStorage) {
-        sequenceNumber++;
+        instanceCounter++;
+        sequenceNumber = instanceCounter;
         processUtilities = ProcessUtilities.getInstance();
         this.repositoryDirectory = repositoryDirectory;
         this.sequenceStorage = sequenceStorage;
