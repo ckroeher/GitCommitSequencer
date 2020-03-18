@@ -57,6 +57,14 @@ public class CommitSequence extends ArrayList<String> {
     private static final String[] GIT_SHOW_COMMAND = {"git", "show"};
     
     /**
+     * The {@link CommitSequence} instance counter to identify individual commit sequences. The value is initialized
+     * with <i>0</i> and will be increased by <i>1</i> every time
+     * {@link CommitSequence#CommitSequence(File, ISequenceStorage)} is called. Hence, the first instance has a sequence
+     * number of <i>1</i>.
+     */
+    private static int sequenceNumber = 0;
+    
+    /**
      * The {@link Logger} for pretty-printing messages to the console.
      */
     private Logger logger = Logger.getInstance();
@@ -87,12 +95,13 @@ public class CommitSequence extends ArrayList<String> {
      *        <code>null</code>
      */
     public CommitSequence(File repositoryDirectory, ISequenceStorage sequenceStorage) {
-        logger.log(ID, "New commit sequence", "Repository: \"" + repositoryDirectory.getAbsolutePath() + "\"",
-                MessageType.INFO);
+        sequenceNumber++;
         processUtilities = ProcessUtilities.getInstance();
-        
         this.repositoryDirectory = repositoryDirectory;
         this.sequenceStorage = sequenceStorage;
+        
+        logger.log(ID, "Commit sequence " + sequenceNumber,
+                "Repository: \"" + repositoryDirectory.getAbsolutePath() + "\"", MessageType.DEBUG);
     }
     
     /**
@@ -105,7 +114,7 @@ public class CommitSequence extends ArrayList<String> {
      */
     public void run(String startCommit) {
         if (commitAvailable(startCommit)) {            
-            logger.log(ID, "Start sequence creation", "Start commit: \"" + startCommit + "\"", MessageType.INFO);
+            logger.log(ID, "Start sequence creation", "Start commit: \"" + startCommit + "\"", MessageType.DEBUG);
             createSequence(startCommit);
             sequenceStorage.add(this);
         } else {
@@ -210,6 +219,15 @@ public class CommitSequence extends ArrayList<String> {
             clonedSequence.add(commit);
         }
         return clonedSequence;
+    }
+    
+    /**
+     * Returns the {@link #sequenceNumber} of this instance.
+     * 
+     * @return the {@link #sequenceNumber} of this instance; equal to or greater than <i>1</i>
+     */
+    public int getSequenceNumber() {
+        return sequenceNumber;
     }
     
     /**
