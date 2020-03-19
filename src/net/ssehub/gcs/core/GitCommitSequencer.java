@@ -15,9 +15,10 @@
 package net.ssehub.gcs.core;
 
 import java.io.File;
-import java.util.ArrayList;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Date;
-import java.util.List;
 
 import net.ssehub.gcs.utilities.Logger;
 import net.ssehub.gcs.utilities.Logger.MessageType;
@@ -45,6 +46,20 @@ public class GitCommitSequencer implements ISequenceStorage {
     private static final String[] GIT_HEAD_COMMIT_COMMAND = {"git", "rev-parse", "HEAD"};
     
     /**
+     * The {@link String} defining the constant prefix of each file, which is created for individual commit sequences.
+     * <br><br>
+     * Value: <code>CommitSequence_</code>
+     */
+    private static final String COMMIT_SEQUENCE_FILE_NAME_PREFIX = "CommitSequence_";
+    
+    /**
+     * The {@link String} defining the constant postfix of each file, which is created for individual commit sequences.
+     * <br><br>
+     * Value: <code>.txt</code>
+     */
+    private static final String COMMIT_SEQUENCE_FILE_NAME_POSTFIX = ".txt";
+    
+    /**
      * The {@link Logger} for pretty-printing messages to the console.
      */
     private static Logger logger = Logger.getInstance();
@@ -65,9 +80,9 @@ public class GitCommitSequencer implements ISequenceStorage {
     private File outputDirectory;
     
     /**
-     * The {@link List} of all {@link CommitSequence}s created from a Git repository.
+     * The number of {@link CommitSequence}(s) created by this {@link GitCommitSequencer}.
      */
-    private List<CommitSequence> commitSequenceList;
+    private int numberOfCreatedCommitSequences;
     
     // TODO: also calculate shortest and longest sequence
     
@@ -81,7 +96,7 @@ public class GitCommitSequencer implements ISequenceStorage {
      */
     private GitCommitSequencer(String[] args) throws ArgumentErrorException {
         parseArgs(args);
-        commitSequenceList = new ArrayList<CommitSequence>();
+        numberOfCreatedCommitSequences = 0;
     }
     
     /**
@@ -121,11 +136,15 @@ public class GitCommitSequencer implements ISequenceStorage {
                     outputDirectory = new File(args[1]);
                     if (!outputDirectory.exists()) {
                         throw new ArgumentErrorException("The output directory \"" + outputDirectory.getAbsolutePath() 
-                        + "\" does not exist");
+                                + "\" does not exist");
                     }
                     if (!outputDirectory.isDirectory()) {
                         throw new ArgumentErrorException("The output directory \"" + outputDirectory.getAbsolutePath() 
-                        + "\" is not a directory");
+                                + "\" is not a directory");
+                    }
+                    if (outputDirectory.list().length != 0) {
+                        throw new ArgumentErrorException("The output directory \"" + outputDirectory.getAbsolutePath() 
+                                + "\" is not empty");
                     }
                 } catch (ArrayIndexOutOfBoundsException e) {
                     throw new ArgumentErrorException("The output directory is not defined", e);
@@ -164,8 +183,9 @@ public class GitCommitSequencer implements ISequenceStorage {
         int durationSeconds = (int) ((durationMillis / 1000) % 60);
         int durationMinutes = (int) ((durationMillis / 1000) / 60);
         
-        logger.log(ID, "Finished", "Commit sequences created: " + commitSequenceList.size() + System.lineSeparator()
-                + "Duration: " + durationMinutes + " min. and " + durationSeconds + " sec.", MessageType.INFO);
+        logger.log(ID, "Finished", "Commit sequences created: " + numberOfCreatedCommitSequences 
+                + System.lineSeparator() + "Duration: " + durationMinutes + " min. and " + durationSeconds + " sec.",
+                MessageType.INFO);
     }
     
     /**
@@ -206,10 +226,71 @@ public class GitCommitSequencer implements ISequenceStorage {
      */
     @Override
     public void add(CommitSequence commitSequence) {
-        commitSequenceList.add(commitSequence);
+        numberOfCreatedCommitSequences++;
+        
+        String commitSequenceFileName = COMMIT_SEQUENCE_FILE_NAME_PREFIX + commitSequence.getSequenceNumber() 
+                + COMMIT_SEQUENCE_FILE_NAME_POSTFIX;
+        writeFile(outputDirectory.getAbsolutePath(), commitSequenceFileName, commitSequence.toString(), false);        
+        
         Date currentDate = new Date();
         logger.log(ID, "New commit sequence created", currentDate.toString() + System.lineSeparator() 
-                + "Number of commits: " + commitSequence.size(), MessageType.INFO);
+                + "Number of commits: " + commitSequence.size(), MessageType.DEBUG);
     }
     
+    /**
+     * Writes the given content to the file specified by the given path and file name.
+     * 
+     * @param path the string representation of the path denoting the location the file shall be saved
+     * @param fileName the name of the file to be created or overridden; this name should contain a file extension
+     * @param fileContent the content which shall be written to the file
+     * @param override specifies whether to override an existing file (<code>true</code>) or not (<code>false</code>)
+     * @return <code>true</code> if creating and writing the file was successful; <code>false</code> otherwise 
+     */
+    private boolean writeFile(String path, String fileName, String fileContent, boolean override) {
+        boolean fileWrittenSuccessfully = false;
+        File file = createFile(path, fileName);
+        // Keep null-check separately to avoid false warning messages generated by inner check
+        if (file != null) {           
+            if (override || !file.exists()) {
+                Path parentDirectory = file.toPath().getParent();
+                try {
+                    if (!Files.exists(parentDirectory)) {
+                        Files.createDirectories(parentDirectory);
+                    }
+                    Files.write(file.toPath(), fileContent.getBytes());
+                    fileWrittenSuccessfully = true;
+                } catch (IOException e) {
+                    logger.logException(ID, "Writing content to file \"" + file.getAbsolutePath() + "\" failed", e);
+                }
+            } else {
+                logger.log(ID, "Writing file \"" + file.getAbsolutePath() + "\" denied",
+                        "The file already exists and overriding is forbidden",
+                        MessageType.ERROR);
+            }
+        } else {
+            logger.log(ID, "Writing to file failed", "The path or file name is empty", MessageType.ERROR);
+        }
+        return fileWrittenSuccessfully;
+    }
+    
+    /**
+     * Creates a new {@link File} based on the given path and file name.
+     * 
+     * @param path the string representation of the path denoting the location of the file to be created
+     * @param fileName the name of the file to be created
+     * @return a new file or <code>null</code> if the path or file name is empty
+     */
+    private File createFile(String path, String fileName) {
+        File file = null;
+        if (path != null && !path.isEmpty()) {
+            if (fileName != null && !fileName.isEmpty()) {
+                file = new File(path, fileName);
+            } else {
+                logger.log(ID, "Cannot create file", "No file name specified", MessageType.ERROR);
+            }
+        } else {
+            logger.log(ID, "Cannot create file", "No path for a file specified", MessageType.ERROR);
+        }
+        return file;
+    }
 }
