@@ -27,6 +27,7 @@ import net.ssehub.gcs.core.CommitSequence;
 /**
  * 
  * This class contains unit tests for the correct creation of {@link CommitSequence}s.
+ * 
  * @author Christian Kroeher
  *
  */
