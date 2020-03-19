@@ -94,7 +94,7 @@ public class GitCommitSequencer implements ISequenceStorage {
      * @throws ArgumentErrorException if user-defined arguments passed as input at start-up are not as expected
      * @see #parseArgs(String[])
      */
-    private GitCommitSequencer(String[] args) throws ArgumentErrorException {
+    public GitCommitSequencer(String[] args) throws ArgumentErrorException {
         parseArgs(args);
         numberOfCreatedCommitSequences = 0;
     }
