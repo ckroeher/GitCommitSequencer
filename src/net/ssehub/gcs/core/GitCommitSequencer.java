@@ -19,8 +19,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import net.ssehub.gcs.utilities.Logger;
-import net.ssehub.gcs.utilities.ProcessUtilities;
 import net.ssehub.gcs.utilities.Logger.MessageType;
+import net.ssehub.gcs.utilities.ProcessUtilities;
 import net.ssehub.gcs.utilities.ProcessUtilities.ExecutionResult;
 
 /**
@@ -46,12 +46,22 @@ public class GitCommitSequencer implements ISequenceStorage {
     /**
      * The {@link Logger} for pretty-printing messages to the console.
      */
-    private Logger logger = Logger.getInstance();
+    private static Logger logger = Logger.getInstance();
     
     /**
      * The {@link File} denoting the root directory of the Git repository from which commit sequences shall be created. 
      */
     private File repositoryDirectory;
+    
+    /**
+     * The {@link String} defining the commit (SHA) to start the creation of commit sequences from.
+     */
+    private String startCommit;
+    
+    /**
+     * The {@link File} denoting the directory to save the results of the {@link GitCommitSequencer} to. 
+     */
+    private File outputDirectory;
     
     /**
      * The {@link List} of all {@link CommitSequence}s created from a Git repository.
@@ -64,19 +74,79 @@ public class GitCommitSequencer implements ISequenceStorage {
      * Constructs a new {@link GitCommitSequencer} instance.
      * 
      * @param args the array of {@link String}s passed as arguments to this tool at start-up and received by 
-     *        {@link #main(String[])}; should never be <code>null</code>, but may be <i>empty</i>
+     *        {@link #main(String[])}; should never be <code>null</code> nor <i>empty</i>
+     * @throws ArgumentErrorException if user-defined arguments passed as input at start-up are not as expected
+     * @see #parseArgs(String[])
      */
-    private GitCommitSequencer(String[] args) {
-        String repositoryDirectoryString = "C:\\Users\\kroeher\\Data\\Repositories\\DevOpt@TUC";
-        repositoryDirectory = new File(repositoryDirectoryString);
+    private GitCommitSequencer(String[] args) throws ArgumentErrorException {
+        parseArgs(args);
         commitSequenceList = new ArrayList<CommitSequence>();
+    }
+    
+    /**
+     * Parses the given arguments received by {@link #main(String[])} and passed through 
+     * {@link #GitCommitSequencer(String[])}. Further, it sets the following attributes based on the given arguments:
+     * <ul>
+     * <li>The first argument as {@link #repositoryDirectory} (<b>mandatory</b>)</li>
+     * <li>The second argument as {@link #outputDirectory} (<b>mandatory</b>)</li>
+     * <li>The third argument as {@link #startCommit} (<b>optional</b>; if not defined, current HEAD commit (SHA) is
+     *     used by default</li>
+     * </ul>
+     * 
+     * @param args the array of {@link String}s passed as arguments to this tool at start-up; should never be 
+     *        <code>null</code>  nor <i>empty</i>
+     * @throws ArgumentErrorException if user-defined arguments passed as input at start-up are not as expected
+     */
+    private void parseArgs(String[] args) throws ArgumentErrorException {
+        if (args != null) {
+            if (args.length == 2 || args.length == 3) {
+                // The first argument as repository directory (mandatory)
+                try {
+                    repositoryDirectory = new File(args[0]);
+                    if (!repositoryDirectory.exists()) {
+                        throw new ArgumentErrorException("The repository directory \"" 
+                                + repositoryDirectory.getAbsolutePath() + "\" does not exist");
+                    }
+                    if (!repositoryDirectory.isDirectory()) {
+                        throw new ArgumentErrorException("The repository directory \"" 
+                                + repositoryDirectory.getAbsolutePath() + "\" is not a directory");
+                    }
+                    // TODO check for git installation and whether the directory is a git repository?
+                } catch (ArrayIndexOutOfBoundsException e) {
+                    throw new ArgumentErrorException("The repository directory is not defined", e);
+                }
+                // The second argument as output directory (mandatory)
+                try {
+                    outputDirectory = new File(args[1]);
+                    if (!outputDirectory.exists()) {
+                        throw new ArgumentErrorException("The output directory \"" + outputDirectory.getAbsolutePath() 
+                        + "\" does not exist");
+                    }
+                    if (!outputDirectory.isDirectory()) {
+                        throw new ArgumentErrorException("The output directory \"" + outputDirectory.getAbsolutePath() 
+                        + "\" is not a directory");
+                    }
+                } catch (ArrayIndexOutOfBoundsException e) {
+                    throw new ArgumentErrorException("The output directory is not defined", e);
+                }
+                // The third argument as start commit (optional)
+                if (args.length == 3) {
+                    startCommit = args[2];
+                } else {
+                    startCommit = getStartCommit();
+                }
+            } else {
+                throw new ArgumentErrorException("Wrong number of arguments");
+            }
+        } else {
+            throw new ArgumentErrorException("No input arguments defined");
+        }
     }
 
     /**
      * Starts the creation of commit sequences by this {@link GitCommitSequencer} instance.
      */
     private void run() {
-        String startCommit = getStartCommit();
         CommitSequence commitSequence = new CommitSequence(repositoryDirectory, this);
         commitSequence.run(startCommit);
         
@@ -116,8 +186,12 @@ public class GitCommitSequencer implements ISequenceStorage {
      *        <i>empty</i>
      */
     public static void main(String[] args) {
-        GitCommitSequencer sequencer = new GitCommitSequencer(args);
-        sequencer.run();
+        try {            
+            GitCommitSequencer sequencer = new GitCommitSequencer(args);
+            sequencer.run();
+        } catch (ArgumentErrorException e) {
+            logger.logException(ID, "Execution failed", e);
+        }
     }
 
     /**
