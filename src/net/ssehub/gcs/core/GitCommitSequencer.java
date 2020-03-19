@@ -166,7 +166,7 @@ public class GitCommitSequencer implements ISequenceStorage {
     /**
      * Starts the creation of commit sequences by this {@link GitCommitSequencer} instance.
      */
-    private void run() {
+    public void run() {
         logger.log(ID, "Start", 
                 "Repository directory: \"" + repositoryDirectory.getAbsolutePath() + "\"" + System.lineSeparator()
                 + "Start commit: \"" + startCommit + "\"" + System.lineSeparator()
