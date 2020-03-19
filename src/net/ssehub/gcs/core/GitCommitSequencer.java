@@ -16,6 +16,7 @@ package net.ssehub.gcs.core;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import net.ssehub.gcs.utilities.Logger;
@@ -147,18 +148,24 @@ public class GitCommitSequencer implements ISequenceStorage {
      * Starts the creation of commit sequences by this {@link GitCommitSequencer} instance.
      */
     private void run() {
+        logger.log(ID, "Start", 
+                "Repository directory: \"" + repositoryDirectory.getAbsolutePath() + "\"" + System.lineSeparator()
+                + "Start commit: \"" + startCommit + "\"" + System.lineSeparator()
+                + "Output directory: \"" + outputDirectory.getAbsolutePath() + "\"", MessageType.INFO);
+        
+        // Determine and save the current time in milliseconds for calculating the execution duration below 
+        long startTimeMillis = System.currentTimeMillis();
+        
         CommitSequence commitSequence = new CommitSequence(repositoryDirectory, this);
         commitSequence.run(startCommit);
         
-        System.out.println("\n\nNumber of sequences: " + commitSequenceList.size());
-        for (int i = 0; i < commitSequenceList.size(); i++) {
-            System.out.println("Sequence " + i);
-            CommitSequence cs = commitSequenceList.get(i);
-            for (String commit : cs) {
-                System.out.println(commit);
-            }
-            System.out.println("");
-        }
+        // Determine end date and time and display them along with the duration of the overall process execution
+        long durationMillis = System.currentTimeMillis() - startTimeMillis;
+        int durationSeconds = (int) ((durationMillis / 1000) % 60);
+        int durationMinutes = (int) ((durationMillis / 1000) / 60);
+        
+        logger.log(ID, "Finished", "Commit sequences created: " + commitSequenceList.size() + System.lineSeparator()
+                + "Duration: " + durationMinutes + " min. and " + durationSeconds + " sec.", MessageType.INFO);
     }
     
     /**
@@ -200,6 +207,9 @@ public class GitCommitSequencer implements ISequenceStorage {
     @Override
     public void add(CommitSequence commitSequence) {
         commitSequenceList.add(commitSequence);
+        Date currentDate = new Date();
+        logger.log(ID, "New commit sequence created", currentDate.toString() + System.lineSeparator() 
+                + "Number of commits: " + commitSequence.size(), MessageType.INFO);
     }
     
 }
