@@ -16,10 +16,11 @@ package net.ssehub.gcs.core;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.List;
 
 import net.ssehub.gcs.utilities.Logger;
-import net.ssehub.gcs.utilities.ProcessUtilities;
 import net.ssehub.gcs.utilities.Logger.MessageType;
+import net.ssehub.gcs.utilities.ProcessUtilities;
 import net.ssehub.gcs.utilities.ProcessUtilities.ExecutionResult;
 
 /**
@@ -89,6 +90,16 @@ public class CommitSequence extends ArrayList<String> {
      * The {@link ISequenceStorage} to which this commit sequence will be stored.
      */
     private ISequenceStorage sequenceStorage;
+    
+    /**
+     * The {@link String} representing the commit (SHA) starting this sequence (the newest commit).
+     */
+    private String startCommit;
+    
+    /**
+     * The {@link List} of {@link CommitSequence}s to create after this sequence is created successfully.
+     */
+    private List<CommitSequence> postponedCommitSequenceList;
 
     /**
      * Constructs a new {@link CommitSequence} instance.
@@ -97,13 +108,18 @@ public class CommitSequence extends ArrayList<String> {
      *        shall be created; should never be <code>null</code> and always needs to be an <i>existing directory</i>
      * @param sequenceStorage the {@link ISequenceStorage} to add this and all other (sub-)sequences to; should never be
      *        <code>null</code>
+     * @param startCommit the {@link String} representing the commit (SHA) starting this sequence (the newest commit);
+     *        passing <code>null</code> or a <i>blank</i> string terminates the creation immediately resulting in a
+     *        potentially empty commit sequence
      */
-    public CommitSequence(File repositoryDirectory, ISequenceStorage sequenceStorage) {
+    public CommitSequence(File repositoryDirectory, ISequenceStorage sequenceStorage, String startCommit) {
         instanceCounter++;
         sequenceNumber = instanceCounter;
         processUtilities = ProcessUtilities.getInstance();
         this.repositoryDirectory = repositoryDirectory;
         this.sequenceStorage = sequenceStorage;
+        this.startCommit = startCommit;
+        postponedCommitSequenceList = new ArrayList<CommitSequence>();
         
         logger.log(ID, "Commit sequence " + sequenceNumber,
                 "Repository: \"" + repositoryDirectory.getAbsolutePath() + "\"", MessageType.DEBUG);
@@ -112,16 +128,15 @@ public class CommitSequence extends ArrayList<String> {
     /**
      * Starts the creation of this commit sequence as well as all sub-sequences and adds them to the
      * {@link ISequenceStorage} passed to the constructor of this class.
-     * 
-     * @param startCommit the {@link String} representing the commit (SHA) starting this sequence (the newest commit);
-     *        passing <code>null</code> or a <i>blank</i> string terminates the creation immediately resulting in a
-     *        potentially empty commit sequence
      */
-    public void run(String startCommit) {
+    public void run() {
         if (commitAvailable(startCommit)) {            
             logger.log(ID, "Start sequence creation", "Start commit: \"" + startCommit + "\"", MessageType.DEBUG);
             createSequence(startCommit);
             sequenceStorage.add(this);
+            for (CommitSequence subCommitSequence : postponedCommitSequenceList) {
+                subCommitSequence.run();
+            }
         } else {
             logger.log(ID, "The commit \"" + startCommit + "\" is not available in \"" 
                     + repositoryDirectory.getAbsolutePath() + "\"", null, MessageType.ERROR);
@@ -147,44 +162,33 @@ public class CommitSequence extends ArrayList<String> {
     }
     
     /**
-     * Creates this commit sequence as well as all sub-sequences resulting from branches in the repository in a
-     * recursive manner: the given commit will be added to this sequence, the parents will be determined (resulting in
-     * potential sub-sequences, of multiple parents are available),and the first of that parents will be input to
-     * another call of this method.
+     * Creates this commit sequence by iterating all parent commits. If multiple parent commits are available, the
+     * method creates respective sub-sequences and adds them to the {@link #postponedCommitSequenceList} for creating
+     * them after this sequences is created successfully.
      * 
-     * @param currentCommit the {@link String} representing the commit (SHA) to add to this sequence and for which the
-     *        parents will be determined; passing <code>null</code> or a <i>blank</i> string terminates the creation
-     *        immediately resulting in a potentially empty commit sequence
+     * @param startCommit the {@link String} representing the commit (SHA) to add to this sequence and for which the
+     *        parents will be determined; should never be <code>null</code> nor <i>blank</i>
      */
-    private void createSequence(String currentCommit) {
-        if (currentCommit != null && !currentCommit.isBlank()) {            
-            // Add the current commit to this sequence
-            this.add(currentCommit);
-            // Get all possible parents of the current commit
-            String[] currentCommitParents = getParents(currentCommit);
-            // Proceed with parent commits, if available; otherwise we are finished with this sequence
-            if (currentCommitParents != null) {
-                // Proceed with parent commits depending on their number
-                if (currentCommitParents.length == 1) {
-                    // There is only a single parent commit; call this method again with that commit
-                    createSequence(currentCommitParents[0]);
-                } else {
-                    /*
-                     * There are multiple parent commits; the first parent commit is the parent commit within this
-                     * sequence, while the other parent commits represent another branch and, hence, another sequence.
-                     * 
-                     * Hence, for each of the other parent commits, create a new commit sequence and add the current
-                     * commits of this sequence to them before starting their actual process.
-                     */
-                    CommitSequence newCommitSequence;
-                    for (int i = 1; i < currentCommitParents.length; i++) {
-                        newCommitSequence = cloneThis();
-                        newCommitSequence.run(currentCommitParents[i]);
-                    }
-                    // Proceed with this sequence
-                    createSequence(currentCommitParents[0]);
-                }
+    private void createSequence(String startCommit) {
+        // Add the start commit as the first commit in this sequence
+        this.add(startCommit);
+        // Start adding parent commit(s)
+        String currentCommit = startCommit;
+        String[] currentCommitParents;
+        CommitSequence subCommitSequence;
+        while ((currentCommitParents = getParents(currentCommit)) != null) {
+            // Make the first parent the current commit
+            currentCommit = currentCommitParents[0];
+            /*
+             * Add all other parent commits to work list (postpone the creation of additional sequences until the
+             * current sequence is done)
+             */
+            for (int i = 1; i < currentCommitParents.length; i++) {
+                subCommitSequence = cloneThis(currentCommitParents[i]);
+                postponedCommitSequenceList.add(subCommitSequence);
             }
+            // After cloning, add the current commit (first parent) to this sequence
+            this.add(currentCommit);
         }
     }
     
@@ -214,13 +218,16 @@ public class CommitSequence extends ArrayList<String> {
     }
     
     /**
-     * Creates a clone of this commit sequence by creating a new {@link CommitSequence} instance and adding all commits
-     * of this sequence to it.
+     * Creates a clone of this commit sequence by creating a new {@link CommitSequence} instance with the given
+     * {@link String} as start commit. As part of this cloning, all commits currently available in this sequence will
+     * also be added to the new sequence in the same order.
      * 
+     * @param startCommit the {@link String} representing the commit (SHA) starting the cloned sequence after all
+     *        commits of this sequence; should never be <code>null</code> nor <i>blank</i>
      * @return the {@link CommitSequence} representing a clone of this one
      */
-    private CommitSequence cloneThis() {
-        CommitSequence clonedSequence = new CommitSequence(repositoryDirectory, sequenceStorage);
+    private CommitSequence cloneThis(String startCommit) {
+        CommitSequence clonedSequence = new CommitSequence(repositoryDirectory, sequenceStorage, startCommit);
         for (String commit : this) {
             clonedSequence.add(commit);
         }

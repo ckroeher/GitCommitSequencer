@@ -181,8 +181,8 @@ public class GitCommitSequencer implements ISequenceStorage {
         // Determine and save the current time in milliseconds for calculating the execution duration below 
         long startTimeMillis = System.currentTimeMillis();
         
-        CommitSequence commitSequence = new CommitSequence(repositoryDirectory, this);
-        commitSequence.run(startCommit);
+        CommitSequence commitSequence = new CommitSequence(repositoryDirectory, this, startCommit);
+        commitSequence.run();
         
         // Determine end date and time and display them along with the duration of the overall process execution
         long durationMillis = System.currentTimeMillis() - startTimeMillis;
