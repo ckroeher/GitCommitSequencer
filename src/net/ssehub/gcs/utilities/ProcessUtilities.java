@@ -56,7 +56,7 @@ public class ProcessUtilities {
      * 
      * @return the single instance of the {@link ProcessUtilities}
      */
-    public static synchronized ProcessUtilities getInstance() {
+    public static ProcessUtilities getInstance() {
         if (instance == null) {
             instance = new ProcessUtilities();
         }
@@ -253,7 +253,7 @@ public class ProcessUtilities {
      *        command; can be <code>null</code> if the process should use the directory in which the tool is executed
      * @return the {@link ExecutionResult} of the process executing the given command; never <code>null</code>
      */
-    public synchronized ExecutionResult executeCommand(String[] command, File workingDirectory) {
+    public ExecutionResult executeCommand(String[] command, File workingDirectory) {
         String commandString = getCommandString(command);
         ExecutionResult executionResult;
         if (workingDirectory != null) {
@@ -320,7 +320,7 @@ public class ProcessUtilities {
      * @param stream the stream from which the data shall be read
      * @return the String-representation of the stream's data
      */
-    public synchronized String readStream(InputStream stream) {
+    public String readStream(InputStream stream) {
         String streamData = null;
         if (stream != null) {            
             StringBuffer outputBuffer = new StringBuffer();
@@ -360,7 +360,7 @@ public class ProcessUtilities {
      * @param commandElement the element to be added at the end of array
      * @return a new array, which consists of the given array extended by the given element
      */
-    public synchronized String[] extendCommand(String[] command, String commandElement) {
+    public String[] extendCommand(String[] command, String commandElement) {
         String[] extendedCommand = new String[command.length + 1];
         for (int i = 0; i < command.length; i++) {
             extendedCommand[i] = command[i];
@@ -378,7 +378,7 @@ public class ProcessUtilities {
      * @return a single string consisting of the elements of the given array separated by whitespaces or
      *         <code>null</code>, if the array is <code>null</code> or <i>empty</i>
      */
-    public synchronized String getCommandString(String[] command) {
+    public String getCommandString(String[] command) {
         String commandString = null;
         if (command != null && command.length > 0) {
             StringBuilder commandStringBuilder = new StringBuilder();

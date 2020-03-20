@@ -120,7 +120,7 @@ public class Logger {
      * 
      * @return the single instance of the {@link Logger}
      */
-    public static synchronized Logger getInstance() {
+    public static Logger getInstance() {
         return instance;
     }
     
@@ -186,7 +186,7 @@ public class Logger {
      * @param description optional description; can be <code>null</code> 
      * @param type the {@link MessageType} of this message; should never be <code>null</code>
      */
-    public synchronized void log(String origin, String message, String description, MessageType type) {
+    public void log(String origin, String message, String description, MessageType type) {
         if (logLevel != LogLevel.SILENT) {            
             if (logLevel == LogLevel.DEBUG || (logLevel != LogLevel.DEBUG && type != MessageType.DEBUG)) {
                 // First line is always: [MESSAGE_TYPE] [ORIGIN]
@@ -209,7 +209,7 @@ public class Logger {
      *        <code>null</code>
      * @param throwable the exception to be displayed; can be <code>null</code>
      */
-    public synchronized void logException(String origin, String message, Throwable throwable) {
+    public void logException(String origin, String message, Throwable throwable) {
         if (logLevel != LogLevel.SILENT) {
             /*
              * Log an exception as a usual log call with the following parameter values:
