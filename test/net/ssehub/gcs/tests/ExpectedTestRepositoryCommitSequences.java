@@ -23,6 +23,9 @@ package net.ssehub.gcs.tests;
  */
 public class ExpectedTestRepositoryCommitSequences {
 
+    /**
+     * The expected commit sequence no. 1.
+     */
     public static final String[] COMMIT_SEQUENCE_1 = {"b6d0c1b366770dee3c28ef8a01169992d85680e2",
         "33a5cd1a93b2ea4062a58b39de3648568b0cae28",
         "44b62719f7fbeea86854d314cc57c5ed3f62f1d6",
@@ -38,6 +41,9 @@ public class ExpectedTestRepositoryCommitSequences {
         "14241f63e538d1e53d636040f83e947aab28f44f"
     };
     
+    /**
+     * The expected commit sequence no. 2.
+     */
     public static final String[] COMMIT_SEQUENCE_2 = {"b6d0c1b366770dee3c28ef8a01169992d85680e2",
         "33a5cd1a93b2ea4062a58b39de3648568b0cae28",
         "44b62719f7fbeea86854d314cc57c5ed3f62f1d6",
@@ -52,6 +58,9 @@ public class ExpectedTestRepositoryCommitSequences {
         "14241f63e538d1e53d636040f83e947aab28f44f"
     };
     
+    /**
+     * The expected commit sequence no. 3.
+     */
     public static final String[] COMMIT_SEQUENCE_3 = {"b6d0c1b366770dee3c28ef8a01169992d85680e2",
         "33a5cd1a93b2ea4062a58b39de3648568b0cae28",
         "44b62719f7fbeea86854d314cc57c5ed3f62f1d6",
@@ -68,6 +77,9 @@ public class ExpectedTestRepositoryCommitSequences {
         "14241f63e538d1e53d636040f83e947aab28f44f"
     };
     
+    /**
+     * The expected commit sequence no. 4.
+     */
     public static final String[] COMMIT_SEQUENCE_4 = {"b6d0c1b366770dee3c28ef8a01169992d85680e2",
         "33a5cd1a93b2ea4062a58b39de3648568b0cae28",
         "44b62719f7fbeea86854d314cc57c5ed3f62f1d6",
@@ -84,6 +96,9 @@ public class ExpectedTestRepositoryCommitSequences {
         "14241f63e538d1e53d636040f83e947aab28f44f"
     };
     
+    /**
+     * The expected commit sequence no. 5.
+     */
     public static final String[] COMMIT_SEQUENCE_5 = {"b6d0c1b366770dee3c28ef8a01169992d85680e2",
         "33a5cd1a93b2ea4062a58b39de3648568b0cae28",
         "44b62719f7fbeea86854d314cc57c5ed3f62f1d6",
@@ -100,6 +115,9 @@ public class ExpectedTestRepositoryCommitSequences {
         "14241f63e538d1e53d636040f83e947aab28f44f"
     };
     
+    /**
+     * The expected commit sequence no. 6.
+     */
     public static final String[] COMMIT_SEQUENCE_6 = {"b6d0c1b366770dee3c28ef8a01169992d85680e2",
         "33a5cd1a93b2ea4062a58b39de3648568b0cae28",
         "44b62719f7fbeea86854d314cc57c5ed3f62f1d6",
@@ -116,6 +134,9 @@ public class ExpectedTestRepositoryCommitSequences {
         "14241f63e538d1e53d636040f83e947aab28f44f"
     };
     
+    /**
+     * The expected commit sequence no. 7.
+     */
     public static final String[] COMMIT_SEQUENCE_7 = {"b6d0c1b366770dee3c28ef8a01169992d85680e2",
         "33a5cd1a93b2ea4062a58b39de3648568b0cae28",
         "44b62719f7fbeea86854d314cc57c5ed3f62f1d6",
@@ -130,6 +151,9 @@ public class ExpectedTestRepositoryCommitSequences {
         "14241f63e538d1e53d636040f83e947aab28f44f"
     };
     
+    /**
+     * The expected commit sequence no. 8.
+     */
     public static final String[] COMMIT_SEQUENCE_8 = {"b6d0c1b366770dee3c28ef8a01169992d85680e2",
         "33a5cd1a93b2ea4062a58b39de3648568b0cae28",
         "44b62719f7fbeea86854d314cc57c5ed3f62f1d6",
@@ -146,6 +170,9 @@ public class ExpectedTestRepositoryCommitSequences {
         "14241f63e538d1e53d636040f83e947aab28f44f"
     };
     
+    /**
+     * The expected commit sequence no. 9.
+     */
     public static final String[] COMMIT_SEQUENCE_9 = {"b6d0c1b366770dee3c28ef8a01169992d85680e2",
         "33a5cd1a93b2ea4062a58b39de3648568b0cae28",
         "44b62719f7fbeea86854d314cc57c5ed3f62f1d6",
@@ -164,6 +191,9 @@ public class ExpectedTestRepositoryCommitSequences {
         "14241f63e538d1e53d636040f83e947aab28f44f"
     };
     
+    /**
+     * The expected commit sequence no. 10.
+     */
     public static final String[] COMMIT_SEQUENCE_10 = {"b6d0c1b366770dee3c28ef8a01169992d85680e2",
         "33a5cd1a93b2ea4062a58b39de3648568b0cae28",
         "44b62719f7fbeea86854d314cc57c5ed3f62f1d6",
@@ -182,6 +212,9 @@ public class ExpectedTestRepositoryCommitSequences {
         "14241f63e538d1e53d636040f83e947aab28f44f"
     };
     
+    /**
+     * The expected commit sequence no. 11.
+     */
     public static final String[] COMMIT_SEQUENCE_11 = {"b6d0c1b366770dee3c28ef8a01169992d85680e2",
         "33a5cd1a93b2ea4062a58b39de3648568b0cae28",
         "44b62719f7fbeea86854d314cc57c5ed3f62f1d6",
@@ -200,6 +233,9 @@ public class ExpectedTestRepositoryCommitSequences {
         "14241f63e538d1e53d636040f83e947aab28f44f"
     };
     
+    /**
+     * The expected commit sequence no. 12.
+     */
     public static final String[] COMMIT_SEQUENCE_12 = {"b6d0c1b366770dee3c28ef8a01169992d85680e2",
         "33a5cd1a93b2ea4062a58b39de3648568b0cae28",
         "44b62719f7fbeea86854d314cc57c5ed3f62f1d6",
@@ -218,6 +254,9 @@ public class ExpectedTestRepositoryCommitSequences {
         "14241f63e538d1e53d636040f83e947aab28f44f"
     };
     
+    /**
+     * The expected commit sequence no. 13.
+     */
     public static final String[] COMMIT_SEQUENCE_13 = {"b6d0c1b366770dee3c28ef8a01169992d85680e2",
         "33a5cd1a93b2ea4062a58b39de3648568b0cae28",
         "44b62719f7fbeea86854d314cc57c5ed3f62f1d6",
@@ -234,6 +273,9 @@ public class ExpectedTestRepositoryCommitSequences {
         "14241f63e538d1e53d636040f83e947aab28f44f"
     };
     
+    /**
+     * The expected commit sequence no. 14.
+     */
     public static final String[] COMMIT_SEQUENCE_14 = {"b6d0c1b366770dee3c28ef8a01169992d85680e2",
         "33a5cd1a93b2ea4062a58b39de3648568b0cae28",
         "44b62719f7fbeea86854d314cc57c5ed3f62f1d6",
@@ -251,6 +293,9 @@ public class ExpectedTestRepositoryCommitSequences {
         "14241f63e538d1e53d636040f83e947aab28f44f"
     };
     
+    /**
+     * The expected commit sequence no. 15.
+     */
     public static final String[] COMMIT_SEQUENCE_15 = {"b6d0c1b366770dee3c28ef8a01169992d85680e2",
         "33a5cd1a93b2ea4062a58b39de3648568b0cae28",
         "44b62719f7fbeea86854d314cc57c5ed3f62f1d6",
@@ -268,6 +313,9 @@ public class ExpectedTestRepositoryCommitSequences {
         "14241f63e538d1e53d636040f83e947aab28f44f"
     };
     
+    /**
+     * The expected commit sequence no. 16.
+     */
     public static final String[] COMMIT_SEQUENCE_16 = {"b6d0c1b366770dee3c28ef8a01169992d85680e2",
         "33a5cd1a93b2ea4062a58b39de3648568b0cae28",
         "44b62719f7fbeea86854d314cc57c5ed3f62f1d6",
@@ -285,6 +333,9 @@ public class ExpectedTestRepositoryCommitSequences {
         "14241f63e538d1e53d636040f83e947aab28f44f"
         };
     
+    /**
+     * The expected commit sequence no. 17.
+     */
     public static final String[] COMMIT_SEQUENCE_17 = {"b6d0c1b366770dee3c28ef8a01169992d85680e2",
         "33a5cd1a93b2ea4062a58b39de3648568b0cae28",
         "44b62719f7fbeea86854d314cc57c5ed3f62f1d6",
@@ -302,6 +353,9 @@ public class ExpectedTestRepositoryCommitSequences {
         "14241f63e538d1e53d636040f83e947aab28f44f"
     };
     
+    /**
+     * The expected commit sequence no. 18.
+     */
     public static final String[] COMMIT_SEQUENCE_18 = {"b6d0c1b366770dee3c28ef8a01169992d85680e2",
         "33a5cd1a93b2ea4062a58b39de3648568b0cae28",
         "44b62719f7fbeea86854d314cc57c5ed3f62f1d6",
@@ -316,4 +370,12 @@ public class ExpectedTestRepositoryCommitSequences {
         "5611e05d76702aad6e51c0b266df0b36e23d36c6",
         "14241f63e538d1e53d636040f83e947aab28f44f"
     };
+    
+    /**
+     * The array of {@link String}-arrays containing all expected commit sequences.
+     */
+    public static final String[][] COMMIT_SEQUENCES = {COMMIT_SEQUENCE_1, COMMIT_SEQUENCE_2, COMMIT_SEQUENCE_3,
+        COMMIT_SEQUENCE_4, COMMIT_SEQUENCE_5, COMMIT_SEQUENCE_6, COMMIT_SEQUENCE_7, COMMIT_SEQUENCE_8,
+        COMMIT_SEQUENCE_9, COMMIT_SEQUENCE_10, COMMIT_SEQUENCE_11, COMMIT_SEQUENCE_12, COMMIT_SEQUENCE_13,
+        COMMIT_SEQUENCE_14, COMMIT_SEQUENCE_15, COMMIT_SEQUENCE_16, COMMIT_SEQUENCE_17, COMMIT_SEQUENCE_18};
 }
