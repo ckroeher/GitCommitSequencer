@@ -85,6 +85,10 @@ public class AllTests {
     @BeforeClass
     public static void globalSetUp() {
         System.out.println("#### Global Test Setup ####");
+        // Create the output directory, if it does not exist
+        if (!TESTDATA_OUTPUT_DIRECTORY.exists()) {
+            assertTrue(TESTDATA_OUTPUT_DIRECTORY.mkdir());
+        }
         // Check if the archive file containing the test repository is available
         if (TESTDATA_REPOSITORY_ARCHIVE_FILE.exists() && TESTDATA_REPOSITORY_ARCHIVE_FILE.isFile()) {
             // Check if the destination of the test repository already exists; delete it in that case
