@@ -44,8 +44,9 @@ public abstract class AbstractCommitSequenceTest {
         if (testRepositoryDirectory != null) {
             if (testRepositoryDirectory.exists() && testRepositoryDirectory.isDirectory()) {
                 sequenceStorage = new TestSequenceStorage();
-                CommitSequence commitSequence = new CommitSequence(testRepositoryDirectory, sequenceStorage);
-                commitSequence.run(startCommit);
+                CommitSequence commitSequence = new CommitSequence(testRepositoryDirectory, sequenceStorage,
+                        startCommit);
+                commitSequence.run();
                 System.out.println("Creation successful");
             } else {
                 System.err.println("Test repository \"" + testRepositoryDirectory.getAbsolutePath() 
