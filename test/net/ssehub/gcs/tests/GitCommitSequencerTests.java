@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -49,6 +50,23 @@ public class GitCommitSequencerTests {
      * The identifier of this class, e.g., for printing messages.
      */
     private static final String ID = "GitCommitSequencerTests";
+    
+    /**
+     * The {@link FilenameFilter} to return commit sequence files only, if {@link File#list(FilenameFilter)} or 
+     * {@link File#listFiles(FilenameFilter)} is used in the tests of this class.
+     */
+    private static final FilenameFilter COMMIT_SEQUENCE_FILE_FILTER = new FilenameFilter() {
+
+        @Override
+        public boolean accept(File dir, String name) {
+            boolean acceptFile = false;
+            if (name.startsWith("CommitSequence_") && name.endsWith(".txt")) {
+                acceptFile = true;
+            }
+            return acceptFile;
+        }
+        
+    };
     
     /**
      * Prints the header of this test class.
@@ -241,7 +259,8 @@ public class GitCommitSequencerTests {
             GitCommitSequencer gitCommitSequencer = new GitCommitSequencer(args);
             gitCommitSequencer.run();
             
-            assertEquals(ExpectedTestRepositoryCommitSequences.COMMIT_SEQUENCES.length,
+            // There must be all available commit sequences (files) one summary file
+            assertEquals(ExpectedTestRepositoryCommitSequences.COMMIT_SEQUENCES.length + 1,
                     AllTests.TESTDATA_OUTPUT_DIRECTORY.list().length, "Wrong number of created commit sequences");
             
         } catch (ArgumentErrorException e) {
@@ -289,7 +308,8 @@ public class GitCommitSequencerTests {
             GitCommitSequencer gitCommitSequencer = new GitCommitSequencer(args);
             gitCommitSequencer.run();
             
-            assertEquals(1, AllTests.TESTDATA_OUTPUT_DIRECTORY.list().length,
+            // There must be two files: one for the created commit sequence and one summary file
+            assertEquals(2, AllTests.TESTDATA_OUTPUT_DIRECTORY.list().length,
                     "Wrong number of created commit sequences");
             
         } catch (ArgumentErrorException e) {
@@ -323,6 +343,125 @@ public class GitCommitSequencerTests {
     }
     
     /**
+     * Tests whether the {@link GitCommitSequencer} creates the expected summary file (with correct content).
+     */
+    @Test
+    public void testCorrectSummaryCreation() {
+        System.out.println("GitCommitSequencerTests - testCorrectSummaryCreation:");
+        try {
+            String[] args = {AllTests.getTestRepository().getAbsolutePath(),
+                    AllTests.TESTDATA_OUTPUT_DIRECTORY.getAbsolutePath()};
+            GitCommitSequencer gitCommitSequencer = new GitCommitSequencer(args);
+            gitCommitSequencer.run();
+            
+            assertTrue(checkCreatedSummary(), "Wrong Git commit sequencer summary created");
+            
+        } catch (ArgumentErrorException e) {
+            assertNull(e, "This should not happen: " + e.getMessage());
+        } finally {
+            // Delete the content of the output directory again
+            assertTrue(AllTests.clearTestOutpuDirectory(), "This should not happen");            
+        }
+    }
+    
+    /**
+     * Checks whether the names and total numbers of commits for each commit sequence in the Git commit sequencer
+     * summary are correct with respect to the created commit sequences (files in the
+     * {@link AllTests#TESTDATA_OUTPUT_DIRECTORY}.
+     * 
+     * @return <code>true</code>, if the names and total numbers of commits for each commit sequence in the Git commit
+     *         sequencer summary are correct; <code>false</code> otherwise
+     */
+    private boolean checkCreatedSummary() {
+        boolean createdSummaryCorrect = true;
+        // Get the Git commit sequencer summary file
+        File createSummaryFile = new File(AllTests.TESTDATA_OUTPUT_DIRECTORY, "GitCommitSequencer_Summary.csv");
+        if (createSummaryFile.exists()  && createSummaryFile.isFile()) {
+            List<String> createSummaryFileLines = readFile(createSummaryFile);
+            // Get the created commit sequences (files)
+            File[] createdCommitSequenceFiles = 
+                    AllTests.TESTDATA_OUTPUT_DIRECTORY.listFiles(COMMIT_SEQUENCE_FILE_FILTER);
+            if (createSummaryFileLines.size() == createdCommitSequenceFiles.length) {
+                int createdSummaryFileLinesCounter = 0;
+                String createdSummaryFileLine;
+                String[] createdSummaryFileCommitSequenceInformation;
+                File createdCommitSequenceFile;
+                while (createdSummaryCorrect && createdSummaryFileLinesCounter < createSummaryFileLines.size()) {
+                    // Get the name of the commit sequences at the current index (line in summary file)
+                    createdSummaryFileLine = createSummaryFileLines.get(createdSummaryFileLinesCounter);
+                    createdSummaryFileCommitSequenceInformation = createdSummaryFileLine.trim().split(",");
+                    // Get the corresponding commit sequence (file) for the commit sequence name in the summary file
+                    createdCommitSequenceFile = 
+                            getCreatedCommitSequenceFile(createdSummaryFileCommitSequenceInformation[0],
+                                    createdCommitSequenceFiles);
+                    /*
+                     * Compare the name and total number of commits defined in the summary file with the created commit
+                     * sequence (file) 
+                     */
+                    createdSummaryCorrect =
+                            compareCommitSequenceInformation(createdSummaryFileCommitSequenceInformation,
+                                    createdCommitSequenceFile);
+                    
+                    createdSummaryFileLinesCounter++;
+                }
+            } else {
+                createdSummaryCorrect = false;
+            }
+        } else {
+            createdSummaryCorrect = false;
+        }
+        return createdSummaryCorrect;
+    }
+    
+    /**
+     * Returns the {@link File} with the given name (without file extension) in the given array.
+     * 
+     * @param createdCommitSequenceFileName the name of the {@link File} to be returned; should never be
+     *        <code>null</code>
+     * @param createdCommitSequenceFiles the array of {@link File}s to search in; should never be <code>null</code>
+     * @return the {@link File} with the given name or <code>null</code>, if no such file exists in the given array
+     */
+    private File getCreatedCommitSequenceFile(String createdCommitSequenceFileName, File[] createdCommitSequenceFiles) {
+        File createdCommitSequenceFile = null;
+        File currentCommitSequenceFile;
+        int createdCommitSequenceFileCounter = 0;
+        while (createdCommitSequenceFile == null
+                && createdCommitSequenceFileCounter < createdCommitSequenceFiles.length) {
+            currentCommitSequenceFile = createdCommitSequenceFiles[createdCommitSequenceFileCounter];
+            if (currentCommitSequenceFile.getName().equals(createdCommitSequenceFileName + ".txt")) {
+                createdCommitSequenceFile = currentCommitSequenceFile;
+            }
+            createdCommitSequenceFileCounter++;
+        }
+        return createdCommitSequenceFile;
+    }
+    
+    /**
+     * Compares the commit sequence information as provided by the given {@link String}-array (single line of the Git
+     * commit sequencer summary) with the information provided by the given, respective commit sequence {@link File}.
+     * 
+     * @param createdSummaryFileCommitSequenceInformation the commit sequence information to compare; should never be
+     *        <code>null</code>
+     * @param createdCommitSequenceFile the commit sequence file to compare
+     * @return <code>true</code>, if the information about the commit sequence are equal; <code>false</code> otherwise
+     */
+    private boolean compareCommitSequenceInformation(String[] createdSummaryFileCommitSequenceInformation,
+            File createdCommitSequenceFile) {
+        boolean commitSequenceInformationEqual = false;
+        if (createdCommitSequenceFile != null) {
+            String expectedFileName = createdSummaryFileCommitSequenceInformation[0] + ".txt";
+            if (expectedFileName.equals(createdCommitSequenceFile.getName())) {
+                List<String> createdCommitSequenceFileLines = readFile(createdCommitSequenceFile);
+                int summaryNumberOfCommits = Integer.parseInt(createdSummaryFileCommitSequenceInformation[1]);
+                if (createdCommitSequenceFileLines.size() == summaryNumberOfCommits) {
+                    commitSequenceInformationEqual = true;
+                }
+            }
+        }
+        return commitSequenceInformationEqual;
+    }
+    
+    /**
      * Checks whether the number of created commit sequences (files in the {@link AllTests#TESTDATA_OUTPUT_DIRECTORY}
      * and their commits are correct.
      * 
@@ -331,7 +470,7 @@ public class GitCommitSequencerTests {
      */
     private boolean checkCreatedCommitSequences() {
         boolean createdCommitSequencesCorrect = true;
-        File[] createdCommitSequenceFiles = AllTests.TESTDATA_OUTPUT_DIRECTORY.listFiles();
+        File[] createdCommitSequenceFiles = AllTests.TESTDATA_OUTPUT_DIRECTORY.listFiles(COMMIT_SEQUENCE_FILE_FILTER);
         if (createdCommitSequenceFiles.length == ExpectedTestRepositoryCommitSequences.COMMIT_SEQUENCES.length) {
             int createdCommitSequenceFilesCounter = 0;
             File createdCommitSequenceFile;
