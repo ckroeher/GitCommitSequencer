@@ -36,7 +36,8 @@ import org.junit.runners.Suite.SuiteClasses;
  */
 @RunWith(Suite.class)
 @SuiteClasses({
-    CommitSequenceTests.class
+    CommitSequenceTests.class,
+    GitCommitSequencerTests.class
     })
 
 
@@ -113,7 +114,7 @@ public class AllTests {
                     + "\" does not exist or is not a file");
             assertTrue(false); // Force termination, if the archive file containing the test repository does not exist
         }
-        System.out.println("#### Global Test Setup ####\n");
+        System.out.println("#### Global Test Setup ####" + System.lineSeparator());
     }
     
     /**
@@ -236,7 +237,7 @@ public class AllTests {
      */
     @AfterClass
     public static void globalTearDown() {
-        System.out.println("\n#### Global Test Teardown ####");
+        System.out.println(System.lineSeparator() + "#### Global Test Teardown ####");
         if (testRepository != null && testRepository.exists()) {
             System.out.println("Deleting \"" + testRepository.getAbsolutePath() + "\"");
             if (delete(testRepository)) {
@@ -280,5 +281,22 @@ public class AllTests {
      */
     public static File getTestRepository() {
         return testRepository;
+    }
+    
+    /**
+     * Deletes all files and directories in the {@link #TESTDATA_OUTPUT_DIRECTORY}.
+     * 
+     * @return <code>true</code>, if deletion was successful; <code>false</code> otherwise
+     */
+    public static boolean clearTestOutpuDirectory() {
+        boolean clearingTestOutputDirectorySuccessful = true;
+        File[] testOutputDirectoryFiles = TESTDATA_OUTPUT_DIRECTORY.listFiles();
+        int testOutputDirectoryFilesCounter = 0;
+        while (clearingTestOutputDirectorySuccessful 
+                && testOutputDirectoryFilesCounter < testOutputDirectoryFiles.length) {
+            clearingTestOutputDirectorySuccessful = delete(testOutputDirectoryFiles[testOutputDirectoryFilesCounter]);
+            testOutputDirectoryFilesCounter++;
+        }
+        return clearingTestOutputDirectorySuccessful;
     }
 }
