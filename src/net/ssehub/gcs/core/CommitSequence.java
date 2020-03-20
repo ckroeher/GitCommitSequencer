@@ -125,6 +125,7 @@ public class CommitSequence extends ArrayList<String> {
         } else {
             logger.log(ID, "The commit \"" + startCommit + "\" is not available in \"" 
                     + repositoryDirectory.getAbsolutePath() + "\"", null, MessageType.ERROR);
+            instanceCounter--;
         }
     }
     
@@ -233,6 +234,13 @@ public class CommitSequence extends ArrayList<String> {
      */
     public int getSequenceNumber() {
         return sequenceNumber;
+    }
+    
+    /**
+     * Resets the {@link #instanceCounter} to <i>0</i>.
+     */
+    public static void resetInstanceCounter() {
+        instanceCounter = 0;
     }
     
     /**
