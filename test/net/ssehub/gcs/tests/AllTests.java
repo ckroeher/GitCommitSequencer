@@ -25,8 +25,6 @@ import java.io.IOException;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 import org.junit.runners.Suite.SuiteClasses;
@@ -36,10 +34,9 @@ import org.junit.runners.Suite.SuiteClasses;
  */
 @RunWith(Suite.class)
 @SuiteClasses({
-    CommitSequenceTests.class,
-    GitCommitSequencerTests.class
+    ArgumentTests.class,
+    ResultTests.class
     })
-
 
 /**
  * This class summarizes all individual test classes into a single test suite. Further it provides global setup and
@@ -49,6 +46,21 @@ import org.junit.runners.Suite.SuiteClasses;
  *
  */
 public class AllTests {
+    
+    /**
+     * The {@link String} used as prefix and postfix of an test class' setup or tear-down message.
+     */
+    public static final String TEST_MARKER = "++++";
+    
+    /**
+     * The {@link String} prepended to an output, which is printed, if the respective test was executed successfully.
+     */
+    public static final String TEST_PASSED_MARKER = "[PASSED]";
+    
+    /**
+     * The {@link String} prepended to an output, which is printed, if the respective test failed.
+     */
+    public static final String TEST_FAILED_MARKER = "[FAILED]";
 
     /**
      * The {@link File} denoting the test data input directory. For example, this directory contains the 
@@ -79,12 +91,11 @@ public class AllTests {
     private static File testRepository;
     
     /**
-     * Creates the {@link #testRepository} as an input for the tests by extracting it from the
-     * {@link #TESTDATA_REPOSITORY_ARCHIVE_FILE}.
+     * Creates the @{@link #TESTDATA_OUTPUT_DIRECTORY}, if it does not exist, and the {@link #testRepository} as an
+     * input for tests by extracting it from the {@link #TESTDATA_REPOSITORY_ARCHIVE_FILE}.
      */
-    @BeforeClass
-    public static void globalSetUp() {
-        System.out.println("#### Global Test Setup ####");
+    public static void createTestdata() {
+        System.out.println(System.lineSeparator() + "---- Test Data Creation ----");
         // Create the output directory, if it does not exist
         if (!TESTDATA_OUTPUT_DIRECTORY.exists()) {
             assertTrue(TESTDATA_OUTPUT_DIRECTORY.mkdir());
@@ -118,7 +129,7 @@ public class AllTests {
                     + "\" does not exist or is not a file");
             assertTrue(false); // Force termination, if the archive file containing the test repository does not exist
         }
-        System.out.println("#### Global Test Setup ####" + System.lineSeparator());
+        System.out.println("---- Test Data Creation ----" + System.lineSeparator());
     }
     
     /**
@@ -237,11 +248,16 @@ public class AllTests {
     }
     
     /**
-     * Deletes the {@link #testRepository} after all tests are done.
+     * Deletes the content of the @{@link #TESTDATA_OUTPUT_DIRECTORY} and the {@link #testRepository}.
      */
-    @AfterClass
-    public static void globalTearDown() {
-        System.out.println(System.lineSeparator() + "#### Global Test Teardown ####");
+    public static void deleteTestdata() {
+        System.out.println("---- Test Data Deletion ----");
+        System.out.println("Deleting content of \"" + TESTDATA_OUTPUT_DIRECTORY.getAbsolutePath() + "\"");
+        if (clearTestOutputDirectory()) {
+            System.out.println("Deletion successful");
+        } else {
+            System.err.println("Deletion failed");
+        }
         if (testRepository != null && testRepository.exists()) {
             System.out.println("Deleting \"" + testRepository.getAbsolutePath() + "\"");
             if (delete(testRepository)) {
@@ -252,7 +268,7 @@ public class AllTests {
         } else {
             System.err.println("Deleting test repository failed; repository does not exist");
         }
-        System.out.println("#### Global Test Teardown ####");
+        System.out.println("---- Test Data Deletion ----" + System.lineSeparator());
     }
     
     /**
@@ -292,7 +308,7 @@ public class AllTests {
      * 
      * @return <code>true</code>, if deletion was successful; <code>false</code> otherwise
      */
-    public static boolean clearTestOutpuDirectory() {
+    public static boolean clearTestOutputDirectory() {
         boolean clearingTestOutputDirectorySuccessful = true;
         File[] testOutputDirectoryFiles = TESTDATA_OUTPUT_DIRECTORY.listFiles();
         int testOutputDirectoryFilesCounter = 0;

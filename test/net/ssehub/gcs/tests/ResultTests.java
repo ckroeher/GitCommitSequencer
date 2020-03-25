@@ -15,7 +15,6 @@
 package net.ssehub.gcs.tests;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -27,6 +26,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -38,18 +38,38 @@ import net.ssehub.gcs.core.GitCommitSequencer;
 import net.ssehub.gcs.utilities.Logger;
 
 /**
- * 
- * This class contains unit tests for the {@link GitCommitSequencer}.
+ * This class contains unit tests for determining whether the {@link GitCommitSequencer} produces correct results.
  * 
  * @author Christian Kroeher
  *
  */
-public class GitCommitSequencerTests {
+public class ResultTests {
+
+    /**
+     * The {@link String} denoting the identifier of this class, e.g., for printing messages.
+     */
+    private static final String ID = ResultTests.class.getSimpleName();
     
     /**
-     * The identifier of this class, e.g., for printing messages.
+     * The {@link String} defining the header and footer title of this test class to be printed at the beginning and the
+     * end of all tests in this class.
+     * 
+     * @see #setUp()
+     * @see #tearDown()
      */
-    private static final String ID = "GitCommitSequencerTests";
+    private static final String TEST_CLASS_TITLE = AllTests.TEST_MARKER + " " + ID + " " + AllTests.TEST_MARKER;
+    
+    /**
+     * The {@link String} defining the constant prefix of a message that indicates the successful execution of a test in
+     * this class.
+     */
+    private static final String TEST_PASSED_PREFIX = AllTests.TEST_PASSED_MARKER + " " + ID;
+    
+    /**
+     * The {@link String} defining the constant prefix of a message that indicates the failed execution of a test in
+     * this class.
+     */
+    private static final String TEST_FAILED_PREFIX = AllTests.TEST_FAILED_MARKER + " " + ID;
     
     /**
      * The {@link FilenameFilter} to return commit sequence files only, if {@link File#list(FilenameFilter)} or 
@@ -69,19 +89,21 @@ public class GitCommitSequencerTests {
     };
     
     /**
-     * Prints the header of this test class.
+     * Prints the header of this test class and calls {@link AllTests#createTestdata()}.
      */
     @BeforeClass
     public static void setUp() {
-        System.out.println(System.lineSeparator() + "++++ Git Commit Sequencer Tests ++++");
+        System.out.println(TEST_CLASS_TITLE);
+        AllTests.createTestdata();
     }
     
     /**
-     * Prints the footer of this test class.
+     * Calls {@link AllTests#deleteTestdata()} and prints the footer of this test class.
      */
     @AfterClass
     public static void tearDown() {
-        System.out.println("++++ Git Commit Sequencer Tests ++++");
+        AllTests.deleteTestdata();
+        System.out.println(TEST_CLASS_TITLE);
     }
     
     /**
@@ -92,157 +114,13 @@ public class GitCommitSequencerTests {
     public void resetCommitSequenceInstanceCounter() {
         CommitSequence.resetInstanceCounter();
     }
-
-    /**
-     * Tests whether the creation of a {@link GitCommitSequencer} instance with parameter <code>null</code> fails.
-     */
-    @Test
-    public void testNoArgs() {
-        try {
-            GitCommitSequencer gitCommitSequencer = new GitCommitSequencer(null);
-            assertNull(gitCommitSequencer, "Creating sequencer with null as arguments should fail");
-        } catch (ArgumentErrorException e) {
-            assertNotNull(e, "Creating sequencer with null as arguments should fail");
-            System.out.println("GitCommitSequencerTests - testNoArgs: " + e.getMessage());
-        }
-    }
     
     /**
-     * Tests whether the creation of a {@link GitCommitSequencer} instance with an empty args-parameter fails.
+     * Prints a new and empty line after each test in this class for better readability of the test outputs.
      */
-    @Test
-    public void testEmptyArgs() {
-        try {
-            String[] args = {};
-            GitCommitSequencer gitCommitSequencer = new GitCommitSequencer(args);
-            assertNull(gitCommitSequencer, "Creating sequencer with empty args-parameter should fail");
-        } catch (ArgumentErrorException e) {
-            assertNotNull(e, "Creating sequencer with empty args-parameter should fail");
-            System.out.println("GitCommitSequencerTests - testEmptyArgs: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Tests whether the creation of a {@link GitCommitSequencer} instance with a single argument in args-parameter
-     * fails.
-     */
-    @Test
-    public void testSingleArgs() {
-        try {
-            String[] args = {""}; // Single argument
-            GitCommitSequencer gitCommitSequencer = new GitCommitSequencer(args);
-            assertNull(gitCommitSequencer, "Creating sequencer with single argument in args-parameter should fail");
-        } catch (ArgumentErrorException e) {
-            assertNotNull(e, "Creating sequencer with single argument in args-parameter should fail");
-            System.out.println("GitCommitSequencerTests - testSingleArgs: " + e.getMessage());
-        }
-    }
-    
-    /**
-     * Tests whether the creation of a {@link GitCommitSequencer} instance with four arguments in args-parameter fails.
-     */
-    @Test
-    public void testFourArgs() {
-        try {
-            String[] args = {"", "", "", ""}; // Four arguments
-            GitCommitSequencer gitCommitSequencer = new GitCommitSequencer(args);
-            assertNull(gitCommitSequencer, "Creating sequencer with four arguments in args-parameter should fail");
-        } catch (ArgumentErrorException e) {
-            assertNotNull(e, "Creating sequencer with four arguments in args-parameter should fail");
-            System.out.println("GitCommitSequencerTests - testFourArgs: " + e.getMessage());
-        }
-    }
-    
-    /**
-     * Tests whether the creation of a {@link GitCommitSequencer} instance with a non-exiting repository directory in
-     * args-parameter fails.
-     */
-    @Test
-    public void testNonExistingRepositoryDirectory() {
-        try {
-            String[] args = {"T:\\his\\does\\not\\exist", ""};
-            GitCommitSequencer gitCommitSequencer = new GitCommitSequencer(args);
-            assertNull(gitCommitSequencer,
-                    "Creating sequencer with a non-exiting repository directory in args-parameter should fail");
-        } catch (ArgumentErrorException e) {
-            assertNotNull(e,
-                    "Creating sequencer with a non-exiting repository directory in args-parameter should fail");
-            System.out.println("GitCommitSequencerTests - testNonExistingRepositoryDirectory: " + e.getMessage());
-        }
-    }
-    
-    /**
-     * Tests whether the creation of a {@link GitCommitSequencer} instance with a file as repository directory in
-     * args-parameter fails.
-     */
-    @Test
-    public void testFileAsRepositoryDirectory() {
-        try {
-            String[] args = {AllTests.TESTDATA_REPOSITORY_ARCHIVE_FILE.getAbsolutePath(), ""};
-            GitCommitSequencer gitCommitSequencer = new GitCommitSequencer(args);
-            assertNull(gitCommitSequencer,
-                    "Creating sequencer with a file as repository directory in args-parameter should fail");
-        } catch (ArgumentErrorException e) {
-            assertNotNull(e,
-                    "Creating sequencer with a file as repository directory in args-parameter should fail");
-            System.out.println("GitCommitSequencerTests - testFileAsRepositoryDirectory: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Tests whether the creation of a {@link GitCommitSequencer} instance with a non-exiting output directory in
-     * args-parameter fails.
-     */
-    @Test
-    public void testNonExistingOutputDirectory() {
-        try {
-            String[] args = {AllTests.getTestRepository().getAbsolutePath(), "T:\\his\\does\\not\\exist"};
-            GitCommitSequencer gitCommitSequencer = new GitCommitSequencer(args);
-            assertNull(gitCommitSequencer,
-                    "Creating sequencer with a non-exiting output directory in args-parameter should fail");
-        } catch (ArgumentErrorException e) {
-            assertNotNull(e,
-                    "Creating sequencer with a non-exiting output directory in args-parameter should fail");
-            System.out.println("GitCommitSequencerTests - testNonExistingOutputDirectory: " + e.getMessage());
-        }
-    }
-    
-    /**
-     * Tests whether the creation of a {@link GitCommitSequencer} instance with a file as output directory in
-     * args-parameter fails.
-     */
-    @Test
-    public void testFileAsOutputDirectory() {
-        try {
-            String[] args = {AllTests.getTestRepository().getAbsolutePath(),
-                    AllTests.TESTDATA_REPOSITORY_ARCHIVE_FILE.getAbsolutePath()};
-            GitCommitSequencer gitCommitSequencer = new GitCommitSequencer(args);
-            assertNull(gitCommitSequencer,
-                    "Creating sequencer with a file as output directory in args-parameter should fail");
-        } catch (ArgumentErrorException e) {
-            assertNotNull(e,
-                    "Creating sequencer with a file as output directory in args-parameter should fail");
-            System.out.println("GitCommitSequencerTests - testFileAsOutputDirectory: " + e.getMessage());
-        }
-    }
-    
-    /**
-     * Tests whether the creation of a {@link GitCommitSequencer} instance with a non-empty output directory in
-     * args-parameter fails.
-     */
-    @Test
-    public void testNonEmptyOutputDirectory() {
-        try {
-            String[] args = {AllTests.getTestRepository().getAbsolutePath(),
-                    AllTests.getTestRepository().getAbsolutePath()};
-            GitCommitSequencer gitCommitSequencer = new GitCommitSequencer(args);
-            assertNull(gitCommitSequencer,
-                    "Creating sequencer with a non-empty output directory in args-parameter should fail");
-        } catch (ArgumentErrorException e) {
-            assertNotNull(e,
-                    "Creating sequencer with a non-empty output directory in args-parameter should fail");
-            System.out.println("GitCommitSequencerTests - testNonEmptyOutputDirectory: " + e.getMessage());
-        }
+    @After
+    public void printNewLine() {
+        System.out.println("");
     }
     
     /**
@@ -252,22 +130,28 @@ public class GitCommitSequencerTests {
      */
     @Test
     public void testSequenceCreationWithHeadAsStartCommit() {
-        System.out.println("GitCommitSequencerTests - testSequenceCreationWithHeadAsStartCommit:");
+        String testIdPart = " - testSequenceCreationWithHeadAsStartCommit";
+        String testSpecificMessagePart = ": Wrong number of created commit sequences";
+        System.out.println(ID + testIdPart);
+        
+        String[] args = {AllTests.getTestRepository().getAbsolutePath(),
+                AllTests.TESTDATA_OUTPUT_DIRECTORY.getAbsolutePath()};
         try {
-            String[] args = {AllTests.getTestRepository().getAbsolutePath(),
-                    AllTests.TESTDATA_OUTPUT_DIRECTORY.getAbsolutePath()};
             GitCommitSequencer gitCommitSequencer = new GitCommitSequencer(args);
             gitCommitSequencer.run();
             
-            // There must be all available commit sequences (files) one summary file
-            assertEquals(ExpectedTestRepositoryCommitSequences.COMMIT_SEQUENCES.length + 1,
-                    AllTests.TESTDATA_OUTPUT_DIRECTORY.list().length, "Wrong number of created commit sequences");
+            // There must be all available commit sequences (files) TODO and one summary file
+            assertEquals(ExpectedTestRepositoryCommitSequences.COMMIT_SEQUENCES.length,
+                    AllTests.TESTDATA_OUTPUT_DIRECTORY.list().length,
+                    TEST_FAILED_PREFIX + testIdPart + testSpecificMessagePart);
             
+            System.out.println(TEST_PASSED_PREFIX + testIdPart);
         } catch (ArgumentErrorException e) {
-            assertNull(e, "This should not happen: " + e.getMessage());
-        } finally {            
-            // Delete the content of the output directory again
-            assertTrue(AllTests.clearTestOutpuDirectory(), "This should not happen");
+            System.out.println(TEST_FAILED_PREFIX + testIdPart);
+            assertNull(e, TEST_FAILED_PREFIX + testIdPart + ": " + e.getMessage());
+        } finally {
+            assertTrue(AllTests.clearTestOutputDirectory(), TEST_FAILED_PREFIX
+                    + ": Clearing the output directory for next test failed");
         }
     }
     
@@ -277,21 +161,26 @@ public class GitCommitSequencerTests {
      */
     @Test
     public void testSequenceCreationWithUserDefinedNonExistingStartCommit() {
-        System.out.println("GitCommitSequencerTests - testSequenceCreationWithUserDefinedNonExistingStartCommit:");
+        String testIdPart = " - testSequenceCreationWithUserDefinedNonExistingStartCommit";
+        String testSpecificMessagePart = ": Wrong number of created commit sequences";
+        System.out.println(ID + testIdPart);
+        
+        String[] args = {AllTests.getTestRepository().getAbsolutePath(),
+                AllTests.TESTDATA_OUTPUT_DIRECTORY.getAbsolutePath(), "abcdefgh"};
         try {
-            String[] args = {AllTests.getTestRepository().getAbsolutePath(),
-                    AllTests.TESTDATA_OUTPUT_DIRECTORY.getAbsolutePath(), "abcdefgh"};
             GitCommitSequencer gitCommitSequencer = new GitCommitSequencer(args);
             gitCommitSequencer.run();
             
             assertEquals(0, AllTests.TESTDATA_OUTPUT_DIRECTORY.list().length,
-                    "Wrong number of created commit sequences");
+                    TEST_FAILED_PREFIX + testIdPart + testSpecificMessagePart);
             
+            System.out.println(TEST_PASSED_PREFIX + testIdPart);
         } catch (ArgumentErrorException e) {
-            assertNull(e, "This should not happen: " + e.getMessage());
+            System.out.println(TEST_FAILED_PREFIX + testIdPart);
+            assertNull(e, TEST_FAILED_PREFIX + testIdPart + ": " + e.getMessage());
         } finally {
-            // Delete the content of the output directory again
-            assertTrue(AllTests.clearTestOutpuDirectory(), "This should not happen");            
+            assertTrue(AllTests.clearTestOutputDirectory(), TEST_FAILED_PREFIX
+                    + ": Clearing the output directory for next test failed");
         }
     }
     
@@ -301,66 +190,87 @@ public class GitCommitSequencerTests {
      */
     @Test
     public void testSequenceCreationWithUserDefinedExistingStartCommit() {
-        System.out.println("GitCommitSequencerTests - testSequenceCreationWithUserDefinedExistingStartCommit:");
+        String testIdPart = " - testSequenceCreationWithUserDefinedExistingStartCommit";
+        String testSpecificMessagePart = ": Wrong number of created commit sequences";
+        System.out.println(ID + testIdPart);
+        
+        String[] args = {AllTests.getTestRepository().getAbsolutePath(),
+                AllTests.TESTDATA_OUTPUT_DIRECTORY.getAbsolutePath(), "2a79fe77210128198ae05d3731b8693c75fb75e0"};
         try {
-            String[] args = {AllTests.getTestRepository().getAbsolutePath(),
-                    AllTests.TESTDATA_OUTPUT_DIRECTORY.getAbsolutePath(), "2a79fe77210128198ae05d3731b8693c75fb75e0"};
             GitCommitSequencer gitCommitSequencer = new GitCommitSequencer(args);
             gitCommitSequencer.run();
             
-            // There must be two files: one for the created commit sequence and one summary file
-            assertEquals(2, AllTests.TESTDATA_OUTPUT_DIRECTORY.list().length,
-                    "Wrong number of created commit sequences");
+            // There must be two files: one for the created commit sequence TODO and one summary file
+            assertEquals(1, AllTests.TESTDATA_OUTPUT_DIRECTORY.list().length,
+                    TEST_FAILED_PREFIX + testIdPart + testSpecificMessagePart);
             
+            System.out.println(TEST_PASSED_PREFIX + testIdPart);
         } catch (ArgumentErrorException e) {
-            assertNull(e, "This should not happen: " + e.getMessage());
+            System.out.println(TEST_FAILED_PREFIX + testIdPart);
+            assertNull(e, TEST_FAILED_PREFIX + testIdPart + ": " + e.getMessage());
         } finally {
-            // Delete the content of the output directory again
-            assertTrue(AllTests.clearTestOutpuDirectory(), "This should not happen");            
+            assertTrue(AllTests.clearTestOutputDirectory(), TEST_FAILED_PREFIX
+                    + ": Clearing the output directory for next test failed");
         }
     }
     
     /**
-     * Tests whether the {@link GitCommitSequencer} creates the expected commit sequences.
+     * Tests whether the {@link GitCommitSequencer} creates the expected commit sequences (correct content), if the HEAD
+     * commit of the test repository received by {@link AllTests#getTestRepository()} is used as start commit (no
+     * user-defined start commit passed as args-parameter).
      */
     @Test
     public void testCorrectSequenceCreation() {
-        System.out.println("GitCommitSequencerTests - testCorrectSequenceCreation:");
+        String testIdPart = " - testCorrectSequenceCreation";
+        String testSpecificMessagePart = ": Wrong commit sequence(s) created";
+        System.out.println(ID + testIdPart);
+                
+        String[] args = {AllTests.getTestRepository().getAbsolutePath(),
+                AllTests.TESTDATA_OUTPUT_DIRECTORY.getAbsolutePath()};
         try {
-            String[] args = {AllTests.getTestRepository().getAbsolutePath(),
-                    AllTests.TESTDATA_OUTPUT_DIRECTORY.getAbsolutePath()};
             GitCommitSequencer gitCommitSequencer = new GitCommitSequencer(args);
             gitCommitSequencer.run();
             
-            assertTrue(checkCreatedCommitSequences(), "Wrong commit sequence(s) created");
+            assertTrue(checkCreatedCommitSequences(ID + testIdPart),
+                    TEST_FAILED_PREFIX + testIdPart + testSpecificMessagePart);
             
+            System.out.println(TEST_PASSED_PREFIX + testIdPart);
         } catch (ArgumentErrorException e) {
-            assertNull(e, "This should not happen: " + e.getMessage());
+            System.out.println(TEST_FAILED_PREFIX + testIdPart);
+            assertNull(e, TEST_FAILED_PREFIX + testIdPart + ": " + e.getMessage());
         } finally {
-            // Delete the content of the output directory again
-            assertTrue(AllTests.clearTestOutpuDirectory(), "This should not happen");            
+            assertTrue(AllTests.clearTestOutputDirectory(), TEST_FAILED_PREFIX
+                    + ": Clearing the output directory for next test failed");        
         }
     }
     
     /**
-     * Tests whether the {@link GitCommitSequencer} creates the expected summary file (with correct content).
+     * Tests whether the {@link GitCommitSequencer} creates the expected summary file (correct content), if the HEAD
+     * commit of the test repository received by {@link AllTests#getTestRepository()} is used as start commit (no
+     * user-defined start commit passed as args-parameter).
      */
     @Test
     public void testCorrectSummaryCreation() {
-        System.out.println("GitCommitSequencerTests - testCorrectSummaryCreation:");
+        String testIdPart = " - testCorrectSummaryCreation";
+        String testSpecificMessagePart = ": Wrong summary created";
+        System.out.println(ID + testIdPart);
+        
+        String[] args = {AllTests.getTestRepository().getAbsolutePath(),
+                AllTests.TESTDATA_OUTPUT_DIRECTORY.getAbsolutePath()};
         try {
-            String[] args = {AllTests.getTestRepository().getAbsolutePath(),
-                    AllTests.TESTDATA_OUTPUT_DIRECTORY.getAbsolutePath()};
             GitCommitSequencer gitCommitSequencer = new GitCommitSequencer(args);
             gitCommitSequencer.run();
             
-            assertTrue(checkCreatedSummary(), "Wrong Git commit sequencer summary created");
+            assertTrue(checkCreatedSummary(ID + testIdPart),
+                    TEST_FAILED_PREFIX + testIdPart + testSpecificMessagePart);
             
+            System.out.println(TEST_PASSED_PREFIX + testIdPart);
         } catch (ArgumentErrorException e) {
-            assertNull(e, "This should not happen: " + e.getMessage());
+            System.out.println(TEST_FAILED_PREFIX + testIdPart);
+            assertNull(e, TEST_FAILED_PREFIX + testIdPart + ": " + e.getMessage());
         } finally {
-            // Delete the content of the output directory again
-            assertTrue(AllTests.clearTestOutpuDirectory(), "This should not happen");            
+            assertTrue(AllTests.clearTestOutputDirectory(), TEST_FAILED_PREFIX
+                    + ": Clearing the output directory for next test failed");        
         }
     }
     
@@ -369,10 +279,11 @@ public class GitCommitSequencerTests {
      * summary are correct with respect to the created commit sequences (files in the
      * {@link AllTests#TESTDATA_OUTPUT_DIRECTORY}.
      * 
+     * @param messagePrefix the {@link String} to print before a particular error message of this method
      * @return <code>true</code>, if the names and total numbers of commits for each commit sequence in the Git commit
      *         sequencer summary are correct; <code>false</code> otherwise
      */
-    private boolean checkCreatedSummary() {
+    private boolean checkCreatedSummary(String messagePrefix) {
         boolean createdSummaryCorrect = true;
         // Get the Git commit sequencer summary file
         File createSummaryFile = new File(AllTests.TESTDATA_OUTPUT_DIRECTORY, "GitCommitSequencer_Summary.csv");
@@ -398,16 +309,21 @@ public class GitCommitSequencerTests {
                      * Compare the name and total number of commits defined in the summary file with the created commit
                      * sequence (file) 
                      */
-                    createdSummaryCorrect =
-                            compareCommitSequenceInformation(createdSummaryFileCommitSequenceInformation,
-                                    createdCommitSequenceFile);
+                    if (!compareCommitSequenceInformation(createdSummaryFileCommitSequenceInformation,
+                            createdCommitSequenceFile)) {
+                        System.out.println(messagePrefix + ": Summary information for commit sequence \"" 
+                                + createdCommitSequenceFile.getName() + "\" not as expected");
+                        createdSummaryCorrect = false;
+                    }
                     
                     createdSummaryFileLinesCounter++;
                 }
             } else {
+                System.out.println(messagePrefix + ": Wrong number of commit sequences in summary");
                 createdSummaryCorrect = false;
             }
         } else {
+            System.out.println(messagePrefix + ": Summary does not exist or is not a file");
             createdSummaryCorrect = false;
         }
         return createdSummaryCorrect;
@@ -465,10 +381,11 @@ public class GitCommitSequencerTests {
      * Checks whether the number of created commit sequences (files in the {@link AllTests#TESTDATA_OUTPUT_DIRECTORY}
      * and their commits are correct.
      * 
+     * @param messagePrefix the {@link String} to print before a particular error message of this method
      * @return <code>true</code>, if the number of created commit sequences and their commits are correct;
      *         <code>false</code> otherwise
      */
-    private boolean checkCreatedCommitSequences() {
+    private boolean checkCreatedCommitSequences(String messagePrefix) {
         boolean createdCommitSequencesCorrect = true;
         File[] createdCommitSequenceFiles = AllTests.TESTDATA_OUTPUT_DIRECTORY.listFiles(COMMIT_SEQUENCE_FILE_FILTER);
         if (createdCommitSequenceFiles.length == ExpectedTestRepositoryCommitSequences.COMMIT_SEQUENCES.length) {
@@ -491,10 +408,15 @@ public class GitCommitSequencerTests {
                  */
                 expectedCommitSequence = getExpectedCommitSequence(createdCommitSequenceFile.getName());
                 // Compare the current and expected commit sequence: equal length/size and equal commits at each index
-                createdCommitSequencesCorrect = equals(expectedCommitSequence, createdCommitSequence);
+                if (!equals(expectedCommitSequence, createdCommitSequence)) {
+                    System.out.println(messagePrefix + ": Commit sequence \"" + createdCommitSequenceFile.getName() 
+                            + "\" not as expected");
+                    createdCommitSequencesCorrect = false;
+                }
                 createdCommitSequenceFilesCounter++;
             }
         } else {
+            System.out.println(messagePrefix + ": Wrong number of created commit sequences");
             createdCommitSequencesCorrect = false;
         }
         return createdCommitSequencesCorrect;
