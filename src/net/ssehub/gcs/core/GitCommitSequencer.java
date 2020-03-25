@@ -19,7 +19,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 import net.ssehub.gcs.utilities.Logger;
 import net.ssehub.gcs.utilities.Logger.MessageType;
@@ -45,20 +47,6 @@ public class GitCommitSequencer implements ISequenceStorage {
      * Command: <code>git rev-parse HEAD</code>
      */
     private static final String[] GIT_HEAD_COMMIT_COMMAND = {"git", "rev-parse", "HEAD"};
-    
-    /**
-     * The {@link String} defining the constant prefix of each file, which is created for individual commit sequences.
-     * <br><br>
-     * Value: <code>CommitSequence_</code>
-     */
-    private static final String COMMIT_SEQUENCE_FILE_NAME_PREFIX = "CommitSequence_";
-    
-    /**
-     * The {@link String} defining the constant postfix of each file, which is created for individual commit sequences.
-     * <br><br>
-     * Value: <code>.txt</code>
-     */
-    private static final String COMMIT_SEQUENCE_FILE_NAME_POSTFIX = ".txt";
     
     /**
      * The {@link String} defining the constant summary file name.
@@ -91,6 +79,14 @@ public class GitCommitSequencer implements ISequenceStorage {
      * The number of {@link CommitSequence}(s) created by this {@link GitCommitSequencer}.
      */
     private int numberOfCreatedCommitSequences;
+    
+    /**
+     * The {@link List} of {@link CommitSequence}s that have to be created by calling {@link CommitSequence#run()}. This
+     * list is filled during the creation of commit sequences that detect sub-sequences. Those sub-sequences are
+     * initialized but their actual creation is postponed until the current sequence is created completely. Hence, the
+     * postponed sequences are added to this list via {@link #add(CommitSequence)}.
+     */
+    private List<CommitSequence> worklist;
     
     /**
      * Constructs a new {@link GitCommitSequencer} instance.
@@ -181,8 +177,15 @@ public class GitCommitSequencer implements ISequenceStorage {
         // Determine and save the current time in milliseconds for calculating the execution duration below 
         long startTimeMillis = System.currentTimeMillis();
         
-        CommitSequence commitSequence = new CommitSequence(repositoryDirectory, this, startCommit);
+        worklist = new ArrayList<CommitSequence>();
+        CommitSequence commitSequence = new CommitSequence(this, repositoryDirectory, startCommit, outputDirectory);
         commitSequence.run();
+        synchronized (this) {
+            while (!worklist.isEmpty()) {
+                commitSequence = worklist.remove(0);
+                commitSequence.run();
+            }
+        }
         
         // Determine end date and time and display them along with the duration of the overall process execution
         long durationMillis = System.currentTimeMillis() - startTimeMillis;
@@ -232,19 +235,9 @@ public class GitCommitSequencer implements ISequenceStorage {
      */
     @Override
     public void add(CommitSequence commitSequence) {
-        numberOfCreatedCommitSequences++;
-        String commitSequenceName = COMMIT_SEQUENCE_FILE_NAME_PREFIX + commitSequence.getSequenceNumber();
-        // Write the given commit sequence to a new file
-        String commitSequenceFileName = commitSequenceName + COMMIT_SEQUENCE_FILE_NAME_POSTFIX;
-        writeFile(outputDirectory.getAbsolutePath(), commitSequenceFileName, commitSequence.toString(), false);        
-        // Append the commit sequence information to the summary file
-        String commitSequenceSummary = commitSequenceName + "," + commitSequence.size() + System.lineSeparator();
-        appendToFile(outputDirectory.getAbsolutePath(), SUMMARY_FILE_NAME,  commitSequenceSummary);
-        
-        
-        Date currentDate = new Date();
-        logger.log(ID, "New commit sequence created", currentDate.toString() + System.lineSeparator() 
-                + "Number of commits: " + commitSequence.size(), MessageType.DEBUG);
+        synchronized (this) {
+            worklist.add(commitSequence);
+        }
     }
     
     /**
@@ -276,39 +269,6 @@ public class GitCommitSequencer implements ISequenceStorage {
                 logger.log(ID, "Writing file \"" + file.getAbsolutePath() + "\" denied",
                         "The file already exists and overriding is forbidden",
                         MessageType.ERROR);
-            }
-        } else {
-            logger.log(ID, "Writing to file failed", "The path or file name is empty", MessageType.ERROR);
-        }
-        return fileWrittenSuccessfully;
-    }
-    
-    /**
-     * Appends the given content to the content of the file specified by the given path and file name.
-     * 
-     * @param path the string representation of the path denoting the location of the file to extend
-     * @param fileName the name of the file to be created or extended; this name should contain a file extension
-     * @param fileContent the content which shall be written to the end of the file
-     * @return <code>true</code> if extending the file was successful; <code>false</code> otherwise 
-     */
-    private boolean appendToFile(String path, String fileName, String fileContent) {
-        boolean fileWrittenSuccessfully = false;
-        File file = createFile(path, fileName);
-        // Keep null-check separately to avoid false warning messages generated by inner check
-        if (file != null) {
-            Path parentDirectory = file.toPath().getParent();
-            try {
-                if (!Files.exists(parentDirectory)) {
-                    Files.createDirectories(parentDirectory);
-                }
-                if (!file.exists()) {                    
-                    Files.write(file.toPath(), fileContent.getBytes());
-                } else {
-                    Files.write(file.toPath(), fileContent.getBytes(), StandardOpenOption.APPEND);
-                }
-                fileWrittenSuccessfully = true;
-            } catch (IOException e) {
-                logger.logException(ID, "Writing content to file \"" + file.getAbsolutePath() + "\" failed", e);
             }
         } else {
             logger.log(ID, "Writing to file failed", "The path or file name is empty", MessageType.ERROR);
