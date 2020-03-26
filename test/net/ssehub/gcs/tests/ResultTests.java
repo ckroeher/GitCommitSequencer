@@ -395,7 +395,7 @@ public class ResultTests {
             int commitSequencesCounter = 0;
             while (createdCommitSequencesCorrect && commitSequencesCounter < expectedCommitSequences.length) {
                 if (!contains(createdCommitSequences, expectedCommitSequences[commitSequencesCounter])) {
-                    System.out.println(messagePrefix + ": Expected commit sequence " + commitSequencesCounter 
+                    System.out.println(messagePrefix + ": Expected commit sequence " + (commitSequencesCounter + 1) 
                             + " not created");
                     createdCommitSequencesCorrect = false;
                 }
