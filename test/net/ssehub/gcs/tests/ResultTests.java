@@ -387,39 +387,56 @@ public class ResultTests {
      */
     private boolean checkCreatedCommitSequences(String messagePrefix) {
         boolean createdCommitSequencesCorrect = true;
-        File[] createdCommitSequenceFiles = AllTests.TESTDATA_OUTPUT_DIRECTORY.listFiles(COMMIT_SEQUENCE_FILE_FILTER);
-        if (createdCommitSequenceFiles.length == ExpectedTestRepositoryCommitSequences.COMMIT_SEQUENCES.length) {
-            int createdCommitSequenceFilesCounter = 0;
-            File createdCommitSequenceFile;
-            List<String> createdCommitSequence;
-            String[] expectedCommitSequence;
-            while (createdCommitSequencesCorrect
-                    && createdCommitSequenceFilesCounter < createdCommitSequenceFiles.length) {
-                // Get the current commit sequence file from output directory
-                createdCommitSequenceFile = createdCommitSequenceFiles[createdCommitSequenceFilesCounter];
-                // Read the content of the current commit sequence file (each line represents one commit)
-                createdCommitSequence = readFile(createdCommitSequenceFile);
-                /*
-                 * Get the corresponding, expected commit sequence detected by the number at the end of the commit
-                 * sequence file name, e.g.:
-                 *     Commit sequence file name = CommitSequence_5.txt
-                 *     Commit sequence number = 5
-                 *     Expected commit sequence = ExpectedTestRepositoryCommitSequences.COMMIT_SEQUENCES[4]
-                 */
-                expectedCommitSequence = getExpectedCommitSequence(createdCommitSequenceFile.getName());
-                // Compare the current and expected commit sequence: equal length/size and equal commits at each index
-                if (!equals(expectedCommitSequence, createdCommitSequence)) {
-                    System.out.println(messagePrefix + ": Commit sequence \"" + createdCommitSequenceFile.getName() 
-                            + "\" not as expected");
+        String[][] expectedCommitSequences = ExpectedTestRepositoryCommitSequences.COMMIT_SEQUENCES;
+        List<String[]> createdCommitSequences = getCreatedCommitSequences();
+        if (expectedCommitSequences.length == createdCommitSequences.size()) {
+            int commitSequencesCounter = 0;
+            while (createdCommitSequencesCorrect && commitSequencesCounter < expectedCommitSequences.length) {
+                if (!contains(createdCommitSequences, expectedCommitSequences[commitSequencesCounter])) {
+                    System.out.println(messagePrefix + ": Expected commit sequence " + commitSequencesCounter 
+                            + " not created");
                     createdCommitSequencesCorrect = false;
                 }
-                createdCommitSequenceFilesCounter++;
+                commitSequencesCounter++;
             }
+            /*
+             * As the contains-method above also removes the created commit sequence from the list of all created
+             * commit sequences, if it matches an expected sequences, the final check is that all expected commits were
+             * contained in that list and the list is empty (there were no additional/unexpected sequences created).
+             */
+            createdCommitSequencesCorrect = createdCommitSequencesCorrect && createdCommitSequences.isEmpty();
         } else {
             System.out.println(messagePrefix + ": Wrong number of created commit sequences");
             createdCommitSequencesCorrect = false;
         }
         return createdCommitSequencesCorrect;
+    }
+    
+    /**
+     * Returns the {@link List} of all commit sequences created and saved as individual files in the 
+     * {@link AllTests#TESTDATA_OUTPUT_DIRECTORY} by the {@link GitCommitSequencer}. An individual commit sequence in
+     * that list is represented by a {@link String}-array, which contains the lines of the created commit sequences
+     * file (each commit of that sequence as individual entry in the array).
+     * 
+     * @return the {@link List} of all commit sequences currently available as individual files in the
+     *         {@link AllTests#TESTDATA_OUTPUT_DIRECTORY} or <code>null</code>, if that directory does not exist or the
+     *         contained commit sequence files could not be retrieved 
+     */
+    private List<String[]> getCreatedCommitSequences() {
+        List<String[]> createdCommitSequences = null;
+        File outputDirectory = AllTests.TESTDATA_OUTPUT_DIRECTORY;
+        if (outputDirectory.exists() && outputDirectory.isDirectory()) {
+            File[] createdCommitSequenceFiles = outputDirectory.listFiles(COMMIT_SEQUENCE_FILE_FILTER);
+            if (createdCommitSequenceFiles != null) {
+                createdCommitSequences = new ArrayList<String[]>();
+                List<String> createdCommitSequenceFileLines;
+                for (int i = 0; i < createdCommitSequenceFiles.length; i++) {
+                    createdCommitSequenceFileLines = readFile(createdCommitSequenceFiles[i]);
+                    createdCommitSequences.add(createdCommitSequenceFileLines.toArray(new String[0]));
+                }
+            }
+        }
+        return createdCommitSequences;
     }
     
     /**
@@ -468,42 +485,47 @@ public class ResultTests {
     }
     
     /**
-     * Returns the expected commit sequence from {@link ExpectedTestRepositoryCommitSequences} based on the created
-     * commit sequence file name by matching the respective commit sequence number.
+     * Checks whether the given {@link List} of created commit sequences contains a sequence that matches the given
+     * {@link String}-array denoting an expected commit sequence. The actual matching occurs in the
+     * {@link #equals(String[], String[])}-method and results in the removal of the matching sequence from the list of
+     * created commit sequences.
      * 
-     * @param commitSequenceFileName the name of the file representing the created commit sequence for which the
-     *        expected commit sequence shall be returned
-     * @return the expected commit sequence from {@link ExpectedTestRepositoryCommitSequences} or <code>null</code>, if
-     *         such a commit sequence is not available
+     * @param createdCommitSequences the {@link List} of created commit sequences in which the expected sequence should
+     *        be found
+     * @param expectedCommitSequence the {@link String}-array representing an expected commit sequence to be found in
+     *        the list of created commit sequences
+     * @return <code>true</code>, if the list of created commit sequences contains the expected sequences;
+     *         <code>false</code> otherwise
      */
-    private String[] getExpectedCommitSequence(String commitSequenceFileName) {
-        String[] expectedCommitSequence = null;
-        try {
-            int expectedCommitSequenceNumber = Integer.parseInt(commitSequenceFileName.substring(15,
-                    commitSequenceFileName.length() - 4));
-            expectedCommitSequence = 
-                    ExpectedTestRepositoryCommitSequences.COMMIT_SEQUENCES[expectedCommitSequenceNumber - 1];
-        } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
-            Logger.getInstance().logException(ID,
-                    "Retrieving expected commit sequence for file \"" + commitSequenceFileName + "\" failed", e);
+    private boolean contains(List<String[]> createdCommitSequences, String[] expectedCommitSequence) {
+        boolean expectedCommitSequenceFound = false;
+        int createdCommitSequencesCounter = 0;
+        while (!expectedCommitSequenceFound && createdCommitSequencesCounter < createdCommitSequences.size()) {
+            if (equals(createdCommitSequences.get(createdCommitSequencesCounter), expectedCommitSequence)) {
+                createdCommitSequences.remove(createdCommitSequencesCounter);
+                expectedCommitSequenceFound = true;
+            }
+            createdCommitSequencesCounter++;
         }
-        return expectedCommitSequence;
+        return expectedCommitSequenceFound;
     }
     
     /**
      * Compares the two given commit sequences with respect to their number of elements as well as equal elements at the
      * same indexes.
      * 
-     * @param expectedCommitSequence the {@link String}-array representing the expected commit sequence
-     * @param createdCommitSequence the {@link List} of {@link String}s representing the created commit sequence
+     * @param createdCommitSequence the {@link String}-array representing a commit sequence created by the 
+     *        {@link GitCommitSequencer}
+     * @param expectedCommitSequence the {@link String}-array representing the expected commit sequence as defined in
+     *        {@link ExpectedTestRepositoryCommitSequences}
      * @return <code>true</code>, if the given commit sequences are equal; <code>false</code> otherwise
      */
-    private boolean equals(String[] expectedCommitSequence, List<String> createdCommitSequence) {
+    private boolean equals(String[] createdCommitSequence, String[] expectedCommitSequence) {
         boolean commitSequencesEqual = true;
-        if (expectedCommitSequence.length == createdCommitSequence.size()) {
+        if (expectedCommitSequence.length == createdCommitSequence.length) {
             int commitCounter = 0;
             while (commitSequencesEqual && commitCounter < expectedCommitSequence.length) {
-                if (!expectedCommitSequence[commitCounter].equals(createdCommitSequence.get(commitCounter))) {
+                if (!expectedCommitSequence[commitCounter].equals(createdCommitSequence[commitCounter])) {
                     commitSequencesEqual = false;
                 }
                 commitCounter++;
