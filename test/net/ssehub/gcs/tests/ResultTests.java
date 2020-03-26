@@ -15,6 +15,7 @@
 package net.ssehub.gcs.tests;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -34,6 +35,7 @@ import org.junit.Test;
 
 import net.ssehub.gcs.core.ArgumentErrorException;
 import net.ssehub.gcs.core.CommitSequence;
+import net.ssehub.gcs.core.CommitSequenceCreationException;
 import net.ssehub.gcs.core.GitCommitSequencer;
 import net.ssehub.gcs.utilities.Logger;
 
@@ -146,7 +148,7 @@ public class ResultTests {
                     TEST_FAILED_PREFIX + testIdPart + testSpecificMessagePart);
             
             System.out.println(TEST_PASSED_PREFIX + testIdPart);
-        } catch (ArgumentErrorException e) {
+        } catch (ArgumentErrorException | CommitSequenceCreationException e) {
             System.out.println(TEST_FAILED_PREFIX + testIdPart);
             assertNull(e, TEST_FAILED_PREFIX + testIdPart + ": " + e.getMessage());
         } finally {
@@ -170,14 +172,14 @@ public class ResultTests {
         try {
             GitCommitSequencer gitCommitSequencer = new GitCommitSequencer(args);
             gitCommitSequencer.run();
-            
-            assertEquals(0, AllTests.TESTDATA_OUTPUT_DIRECTORY.list().length,
-                    TEST_FAILED_PREFIX + testIdPart + testSpecificMessagePart);
-            
-            System.out.println(TEST_PASSED_PREFIX + testIdPart);
         } catch (ArgumentErrorException e) {
             System.out.println(TEST_FAILED_PREFIX + testIdPart);
             assertNull(e, TEST_FAILED_PREFIX + testIdPart + ": " + e.getMessage());
+        } catch (CommitSequenceCreationException e) {
+            assertNotNull(e, TEST_PASSED_PREFIX + testIdPart + "Expected CommitSequenceCreationException");
+            assertEquals(0, AllTests.TESTDATA_OUTPUT_DIRECTORY.list().length,
+                    TEST_FAILED_PREFIX + testIdPart + testSpecificMessagePart);
+            System.out.println(TEST_PASSED_PREFIX + testIdPart);
         } finally {
             assertTrue(AllTests.clearTestOutputDirectory(), TEST_FAILED_PREFIX
                     + ": Clearing the output directory for next test failed");
@@ -205,7 +207,7 @@ public class ResultTests {
                     TEST_FAILED_PREFIX + testIdPart + testSpecificMessagePart);
             
             System.out.println(TEST_PASSED_PREFIX + testIdPart);
-        } catch (ArgumentErrorException e) {
+        } catch (ArgumentErrorException | CommitSequenceCreationException e) {
             System.out.println(TEST_FAILED_PREFIX + testIdPart);
             assertNull(e, TEST_FAILED_PREFIX + testIdPart + ": " + e.getMessage());
         } finally {
@@ -235,7 +237,7 @@ public class ResultTests {
                     TEST_FAILED_PREFIX + testIdPart + testSpecificMessagePart);
             
             System.out.println(TEST_PASSED_PREFIX + testIdPart);
-        } catch (ArgumentErrorException e) {
+        } catch (ArgumentErrorException | CommitSequenceCreationException e) {
             System.out.println(TEST_FAILED_PREFIX + testIdPart);
             assertNull(e, TEST_FAILED_PREFIX + testIdPart + ": " + e.getMessage());
         } finally {
@@ -265,7 +267,7 @@ public class ResultTests {
                     TEST_FAILED_PREFIX + testIdPart + testSpecificMessagePart);
             
             System.out.println(TEST_PASSED_PREFIX + testIdPart);
-        } catch (ArgumentErrorException e) {
+        } catch (ArgumentErrorException | CommitSequenceCreationException e) {
             System.out.println(TEST_FAILED_PREFIX + testIdPart);
             assertNull(e, TEST_FAILED_PREFIX + testIdPart + ": " + e.getMessage());
         } finally {

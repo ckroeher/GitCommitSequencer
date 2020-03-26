@@ -18,9 +18,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 import net.ssehub.gcs.utilities.Logger;
@@ -167,8 +165,10 @@ public class GitCommitSequencer implements ISequenceStorage {
 
     /**
      * Starts the creation of commit sequences by this {@link GitCommitSequencer} instance.
+     * 
+     * @throws CommitSequenceCreationException if creating a commit sequence fails 
      */
-    public void run() {
+    public void run() throws CommitSequenceCreationException {
         logger.log(ID, "Start", 
                 "Repository directory: \"" + repositoryDirectory.getAbsolutePath() + "\"" + System.lineSeparator()
                 + "Start commit: \"" + startCommit + "\"" + System.lineSeparator()
@@ -226,7 +226,9 @@ public class GitCommitSequencer implements ISequenceStorage {
             GitCommitSequencer sequencer = new GitCommitSequencer(args);
             sequencer.run();
         } catch (ArgumentErrorException e) {
-            logger.logException(ID, "Execution failed", e);
+            logger.logException(ID, "Parsing the given arguments failed", e);
+        } catch (CommitSequenceCreationException e) {
+            logger.logException(ID, "Creating a commit sequence failed", e);
         }
     }
 

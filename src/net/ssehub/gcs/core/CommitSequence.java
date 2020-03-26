@@ -140,9 +140,10 @@ public class CommitSequence {
      * @param outputDirectory the {@link File} denoting the output directory to which the file representing this commit
      *        sequence shall be stored; should never be <code>null</code> and always needs to be an
      *        <i>existing directory</i> 
+     * @throws CommitSequenceCreationException if creating the new instance fails
      */
     public CommitSequence(ISequenceStorage sequenceStorage, File repositoryDirectory, String startCommit,
-            File outputDirectory) {
+            File outputDirectory) throws CommitSequenceCreationException {
         setup(sequenceStorage, repositoryDirectory, startCommit, outputDirectory);
         
         logger.log(ID, "Commit sequence " + sequenceNumber,
@@ -171,7 +172,14 @@ public class CommitSequence {
     //CHECKSTYLE:OFF - Avoid errors due to too many arguments
     private CommitSequence(ISequenceStorage sequenceStorage, File repositoryDirectory, String startCommit,
             File outputDirectory, File childCommitSequence, String childCommit) {
-        setup(sequenceStorage, repositoryDirectory, startCommit, outputDirectory);
+        /*
+         * In contrast to the public constructor, this constructor is called internally to create sub-sequences, which
+         * start with a commit received from the return value of the GIT_PARENT_COMMIT_COMMAND. Hence, we do not need
+         * to check for the availability of that commit here, which lead to calling the setup without the start commit,
+         * but directly setting it as part of this constructor. 
+         */
+        setup(sequenceStorage, repositoryDirectory, outputDirectory);
+        this.startCommit = startCommit;
         
         this.childCommitSequence = childCommitSequence;
         this.childCommit = childCommit;
@@ -197,9 +205,34 @@ public class CommitSequence {
      * @param outputDirectory the {@link File} denoting the output directory to which the file representing this commit
      *        sequence shall be stored; should never be <code>null</code> and always needs to be an
      *        <i>existing directory</i>
+     * @throws CommitSequenceCreationException if setting up this instance fails, e.g., the given start commit is not
+     *         available in the given repository (directory)
      */
     private void setup(ISequenceStorage sequenceStorage, File repositoryDirectory, String startCommit,
-            File outputDirectory) {
+            File outputDirectory) throws CommitSequenceCreationException {
+        setup(sequenceStorage, repositoryDirectory, outputDirectory);
+        if (commitAvailable(startCommit)) {
+            this.startCommit = startCommit;
+        } else {
+            throw new CommitSequenceCreationException("The commit \"" + startCommit + "\" is not available in \"" 
+                    + repositoryDirectory.getAbsolutePath() + "\"");
+        }
+    }
+    
+    /**
+     * Initializes this {@link CommitSequence} instance.
+     * 
+     * @param sequenceStorage the {@link ISequenceStorage} to add commit sub-sequences to for their creation after this
+     *        sequences is created completely; should never be <code>null</code>
+     * @param repositoryDirectory the {@link File} denoting the repository (directory) from which this commit sequence
+     *        shall be created; should never be <code>null</code> and always needs to be an <i>existing directory</i>
+     * @param outputDirectory the {@link File} denoting the output directory to which the file representing this commit
+     *        sequence shall be stored; should never be <code>null</code> and always needs to be an
+     *        <i>existing directory</i>
+     * @throws CommitSequenceCreationException if setting up this instance fails, e.g., the given start commit is not
+     *         available in the given repository (directory)
+     */
+    private void setup(ISequenceStorage sequenceStorage, File repositoryDirectory, File outputDirectory) {
         instanceCounter++;
         sequenceNumber = instanceCounter;
         
@@ -207,7 +240,6 @@ public class CommitSequence {
         
         this.sequenceStorage = sequenceStorage;
         this.repositoryDirectory = repositoryDirectory;
-        this.startCommit = startCommit;
         this.childCommitSequence = null;
         this.childCommit = null;
         
@@ -220,16 +252,8 @@ public class CommitSequence {
      * for their creation after this sequences is created completely.
      */
     public void run() {
-        // TODO this only needs to be checked of the public constructor is called
-        // If the private constructor is called, the start string is actually an available (parent) commit
-        if (commitAvailable(startCommit)) {            
-            logger.log(ID, "Start sequence creation", "Start commit: \"" + startCommit + "\"", MessageType.DEBUG);
-            createSequence(startCommit);
-        } else {
-            logger.log(ID, "The commit \"" + startCommit + "\" is not available in \"" 
-                    + repositoryDirectory.getAbsolutePath() + "\"", null, MessageType.ERROR);
-            instanceCounter--;
-        }
+        logger.log(ID, "Start sequence creation", "Start commit: \"" + startCommit + "\"", MessageType.DEBUG);
+        createSequence(startCommit);
     }
     
     /**
@@ -261,6 +285,10 @@ public class CommitSequence {
         // First, prepend potential child commits to this sequence
         if (prependChildren()) {            
             // Add the start commit as the first commit in this sequence
+            /*
+             * TODO keep the stream alive as long as not all parents were found; then close it (do not open/close for
+             * each commit in the sequence)
+             */
             toOutputFile(startCommit);
             // Start adding parent commit(s)
             String currentCommit = startCommit;
