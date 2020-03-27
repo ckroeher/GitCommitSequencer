@@ -16,12 +16,8 @@ package net.ssehub.gcs.core;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.RandomAccessFile;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
 
 import net.ssehub.gcs.utilities.Logger;
 import net.ssehub.gcs.utilities.Logger.MessageType;
@@ -110,28 +106,15 @@ public class CommitSequence {
     private String startCommit;
     
     /**
-     * The {@link File} denoting the output file to which the commits of this {@link CommitSequence} will be written
-     * iteratively.
+     * The {@link File} denoting the output file to which the commits of this {@link CommitSequence} will be written.
      */
     private File outputFile;
     
     /**
-     * The {@link RandomAccessFile} used to open the {@link #outputFileChannel} in {@link #openFileChannel()}.
-     * 
-     * @see #openFileChannel()
-     * @see #toFileChannel(String)
-     * @see #closeFileChannel()
+     * The {@link CommitCache} to which the commits of this sequence will be added. This cache also manages the actual
+     * creation of the {@link #outputFile} and the writing of the commits of this sequence.
      */
-    private RandomAccessFile outputFileStream;
-    
-    /**
-     * The {@link FileChannel} used to write the commits of this sequence to the {@link #outputFile}.
-     * 
-     * @see #openFileChannel()
-     * @see #toFileChannel(String)
-     * @see #closeFileChannel()
-     */
-    private FileChannel outputFileChannel;
+    private CommitCache commitCache;
     
     /**
      * The {@link File} denoting the child {@link CommitSequence} of this sequence. The content of that file will be
@@ -273,17 +256,14 @@ public class CommitSequence {
      */
     public void run() {
         logger.log(ID, "Start sequence creation", "Start commit: \"" + startCommit + "\"", MessageType.DEBUG);
-        try {            
-            if (openFileChannel()) {
-                createSequence(startCommit);
+        try {
+            commitCache = new CommitCache(outputFile);
+            createSequence(startCommit);
+            if (!commitCache.destroy()) {
+                logger.log(ID, "Destroying the commit cache failed", null, MessageType.ERROR);
             }
-        } catch (CommitSequenceCreationException e) {
+        } catch (CommitCacheCreationException e) {
             logger.logException(ID, "Creating commit sequence failed", e);
-        } finally {
-            if (!closeFileChannel()) {
-                logger.log(ID, "Closing the file channel for output file \"" + outputFile.getAbsolutePath() 
-                        + "\" failed", null, MessageType.ERROR);
-            }
         }
     }
     
@@ -316,24 +296,28 @@ public class CommitSequence {
         // First, prepend potential child commits to this sequence
         if (prependChildren()) {            
             // Add the start commit as the first commit in this sequence
-            toFileChannel(startCommit);
+            commitCache.add(startCommit);
             // Start adding parent commit(s)
             String currentCommit = startCommit;
             String[] currentCommitParents;
             CommitSequence subCommitSequence;
             while ((currentCommitParents = getParents(currentCommit)) != null) {
                 /*
-                 * Add all other parent commits to work list (postpone the creation of additional sequences until the
-                 * current sequence is done)
+                 * For all parent commits (except for the first one), create a new (sub-) commit sequence and add this
+                 * sequence (output file) and the current commit as child. The creation of those sequences will start
+                 * with prepending all commits of this sequence until the current commit is reached (inclusive). 
                  */
                 for (int i = 1; i < currentCommitParents.length; i++) {
                     subCommitSequence = new CommitSequence(sequenceStorage, repositoryDirectory,
                             currentCommitParents[i], outputFile.getParentFile(), outputFile, currentCommit);
                     sequenceStorage.add(subCommitSequence);
                 }
-                // Make the first parent the current commit
+                /*
+                 * The first parent commit defines the subsequent sequence part of this sequence. Hence, we define that
+                 * parent as the current commit, add it to the cache of this sequence, and go one.
+                 */
                 currentCommit = currentCommitParents[0];
-                toFileChannel(currentCommit);
+                commitCache.add(currentCommit);
             }
         }
     }
@@ -358,7 +342,7 @@ public class CommitSequence {
                 bufferedReader = new BufferedReader(fileReader);
                 String fileLine;
                 while ((fileLine = bufferedReader.readLine()) != null) {
-                    toFileChannel(fileLine);
+                    commitCache.add(fileLine);
                     if (fileLine.equals(childCommit)) {
                         break;
                     }
@@ -413,78 +397,6 @@ public class CommitSequence {
                     parentCommitsCommandResult.getErrorOutputData(), MessageType.ERROR);
         }
         return parentCommits;
-    }
-    
-    /**
-     * Opens a file channel by creating the {@link #outputFileStream} and the {@link #outputFileChannel} based on the
-     * {@link #outputFile}.
-     * 
-     * @return <code>true</code>, if creating (opening) the file channel was successful; <code>false</code> otherwise
-     * @throws CommitSequenceCreationException if creating (opening) the file channel failed
-     * @see #toFileChannel(String)
-     * @see #closeFileChannel()
-     */
-    private boolean openFileChannel() throws CommitSequenceCreationException {
-        boolean fileChannelOpen = false;
-        if (outputFile != null) {
-            try {
-                outputFileStream = new RandomAccessFile(outputFile.getAbsolutePath(), "rw");
-                outputFileChannel = outputFileStream.getChannel();
-                fileChannelOpen = outputFileStream != null && outputFileChannel != null;
-            } catch (FileNotFoundException e) {
-                throw new CommitSequenceCreationException("Opening file channel for output file \""
-                        + outputFile.getAbsolutePath() + "\" failed", e);
-            }          
-        } else {
-            throw new CommitSequenceCreationException("No output file for this sequence available");
-        }
-        return fileChannelOpen;
-    }
-    
-    /**
-     * Writes the given commit (extended by a line separator) to the end of the {@link #outputFile} using the
-     * {@link #outputFileChannel}.
-     * 
-     * @param commit the {@link String} denoting the next commit in this sequence
-     * @return <code>true</code>, if writing the given commit was successful; <code>false</code> otherwise
-     * @see #openFileChannel()
-     * @see #closeFileChannel()
-     */
-    private boolean toFileChannel(String commit) {
-        boolean commitWrittenSuccessfully = false;
-        if (outputFileStream != null && outputFileChannel != null) {
-            String commitString = commit + System.lineSeparator();
-            byte[] commitStringBytes = commitString.getBytes();
-            ByteBuffer commitStringByteBuffer = ByteBuffer.allocate(commitStringBytes.length);
-            commitStringByteBuffer.put(commitStringBytes);
-            commitStringByteBuffer.flip();
-            try {
-                outputFileChannel.write(commitStringByteBuffer);
-            } catch (IOException e) {
-                logger.logException(ID, "Writing commit \"" + commit + "\" to file \"" + outputFile.getAbsolutePath()
-                        + "\" failed", e);
-            }
-        }
-        return commitWrittenSuccessfully;
-    }
-    
-    /**
-     * Closes the {@link #outputFileStream} and the {@link #outputFileChannel}.
-     * 
-     * @return <code>true</code>, if closing was successful; <code>false</code> otherwise
-     * @see #openFileChannel()
-     * @see #toFileChannel(String)
-     */
-    private boolean closeFileChannel() {
-        boolean fileChannelClosed = false;
-        try {
-            outputFileStream.close();
-            outputFileChannel.close();
-            fileChannelClosed = true;
-        } catch (IOException | NullPointerException e) {
-            logger.logException(ID, "Closing the file channel failed", e);
-        }
-        return fileChannelClosed;
     }
     
     /**
