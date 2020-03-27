@@ -409,6 +409,33 @@ public class CommitSequence {
     }
     
     /**
+     * Returns the {@link String} denoting the name of the {@link #outputFile} of this instance.
+     * 
+     * @return the {@link String} denoting the name of the {@link #outputFile} of this instance
+     */
+    public String getOutputFileName() {
+        return outputFile.getName();
+    }
+    
+    /**
+     * Returns the (total) number of commits in this {@link CommitSequence} instance.
+     * 
+     * @return the (total) number of commits in this {@link CommitSequence} instance
+     */
+    public int getNumberOfCommits() {
+        return commitCache.getTotalNumberOfCommits();
+    }
+    
+    /**
+     * Returns the total number of created {@link CommitSequence} instances.
+     * 
+     * @return the total number of created {@link CommitSequence} instances
+     */
+    public static int getNumberOfInstances() {
+        return instanceCounter;
+    }
+    
+    /**
      * Resets the {@link #instanceCounter} to <i>0</i>.
      */
     public static void resetInstanceCounter() {

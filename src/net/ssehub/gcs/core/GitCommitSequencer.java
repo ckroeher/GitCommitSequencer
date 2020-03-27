@@ -15,12 +15,10 @@
 package net.ssehub.gcs.core;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
+import net.ssehub.gcs.utilities.FileUtilities;
 import net.ssehub.gcs.utilities.Logger;
 import net.ssehub.gcs.utilities.Logger.MessageType;
 import net.ssehub.gcs.utilities.ProcessUtilities;
@@ -59,6 +57,12 @@ public class GitCommitSequencer implements ISequenceStorage {
     private static Logger logger = Logger.getInstance();
     
     /**
+     * The {@link FileUtilities} for opening and closing the {@link #outputFileChannel} for writing the commits to an
+     * output file.
+     */
+    private FileUtilities fileUtilities;
+    
+    /**
      * The {@link File} denoting the root directory of the Git repository from which commit sequences shall be created. 
      */
     private File repositoryDirectory;
@@ -74,9 +78,9 @@ public class GitCommitSequencer implements ISequenceStorage {
     private File outputDirectory;
     
     /**
-     * The number of {@link CommitSequence}(s) created by this {@link GitCommitSequencer}.
+     * The {@link File} denoting the file containing the summary of the results of the {@link GitCommitSequencer}. 
      */
-    private int numberOfCreatedCommitSequences;
+    private File summaryFile;
     
     /**
      * The {@link List} of {@link CommitSequence}s that have to be created by calling {@link CommitSequence#run()}. This
@@ -96,7 +100,8 @@ public class GitCommitSequencer implements ISequenceStorage {
      */
     public GitCommitSequencer(String[] args) throws ArgumentErrorException {
         parseArgs(args);
-        numberOfCreatedCommitSequences = 0;
+        summaryFile = new File(outputDirectory, SUMMARY_FILE_NAME);
+        fileUtilities = new FileUtilities();
     }
     
     /**
@@ -162,40 +167,6 @@ public class GitCommitSequencer implements ISequenceStorage {
             throw new ArgumentErrorException("No input arguments defined");
         }
     }
-
-    /**
-     * Starts the creation of commit sequences by this {@link GitCommitSequencer} instance.
-     * 
-     * @throws CommitSequenceCreationException if creating a commit sequence fails 
-     */
-    public void run() throws CommitSequenceCreationException {
-        logger.log(ID, "Start", 
-                "Repository directory: \"" + repositoryDirectory.getAbsolutePath() + "\"" + System.lineSeparator()
-                + "Start commit: \"" + startCommit + "\"" + System.lineSeparator()
-                + "Output directory: \"" + outputDirectory.getAbsolutePath() + "\"", MessageType.INFO);
-        
-        // Determine and save the current time in milliseconds for calculating the execution duration below 
-        long startTimeMillis = System.currentTimeMillis();
-        
-        worklist = new ArrayList<CommitSequence>();
-        CommitSequence commitSequence = new CommitSequence(this, repositoryDirectory, startCommit, outputDirectory);
-        commitSequence.run();
-        synchronized (this) {
-            while (!worklist.isEmpty()) {
-                commitSequence = worklist.remove(0);
-                commitSequence.run();
-            }
-        }
-        
-        // Determine end date and time and display them along with the duration of the overall process execution
-        long durationMillis = System.currentTimeMillis() - startTimeMillis;
-        int durationSeconds = (int) ((durationMillis / 1000) % 60);
-        int durationMinutes = (int) ((durationMillis / 1000) / 60);
-        
-        logger.log(ID, "Finished", "Commit sequences created: " + numberOfCreatedCommitSequences 
-                + System.lineSeparator() + "Duration: " + durationMinutes + " min. and " + durationSeconds + " sec.",
-                MessageType.INFO);
-    }
     
     /**
      * Determines the commit, which represents the start of all commit sequences.
@@ -214,6 +185,87 @@ public class GitCommitSequencer implements ISequenceStorage {
         }
         return startCommit;
     }
+
+    /**
+     * Starts the creation of commit sequences by this {@link GitCommitSequencer} instance.
+     * 
+     * @throws CommitSequenceCreationException if creating a commit sequence fails 
+     */
+    public void run() throws CommitSequenceCreationException {
+        logger.log(ID, "Start", 
+                "Repository directory: \"" + repositoryDirectory.getAbsolutePath() + "\"" + System.lineSeparator()
+                + "Start commit: \"" + startCommit + "\"" + System.lineSeparator()
+                + "Output directory: \"" + outputDirectory.getAbsolutePath() + "\"", MessageType.INFO);
+        
+        // Determine and save the current time in milliseconds for calculating the execution duration below 
+        long startTimeMillis = System.currentTimeMillis();
+        
+        // Open the file channel for writing the summary file
+        if (fileUtilities.openFileChannel(summaryFile)) {            
+            // Create commit sequences
+            try {                
+                worklist = new ArrayList<CommitSequence>();
+                CommitSequence commitSequence = new CommitSequence(this, repositoryDirectory, startCommit,
+                        outputDirectory);
+                commitSequence.run();
+                toSummary(commitSequence.getOutputFileName(), commitSequence.getNumberOfCommits());
+                synchronized (this) {
+                    while (!worklist.isEmpty()) {
+                        commitSequence = worklist.remove(0);
+                        commitSequence.run();
+                        toSummary(commitSequence.getOutputFileName(), commitSequence.getNumberOfCommits());
+                    }
+                }
+            } catch (CommitSequenceCreationException e) {
+                /*
+                 * This is a hack to ensure that the summary file channel will be closed in any situation although it is
+                 * intended that the exception will be propagated.
+                 */
+                throw e;
+            } finally {                
+                // Close the file channel for writing the summary file
+                if (!fileUtilities.closeFileChannel()) {
+                    logger.log(ID, "Closing the file channel for summar file \"" + summaryFile.getAbsolutePath() 
+                            + "\" failed", null, MessageType.ERROR);
+                }
+            }
+        } else {
+            logger.log(ID, "Terminating execution", "Opening the file channel for writing summary file \""
+                    + summaryFile.getAbsolutePath() + "\" failed", MessageType.ERROR);
+        }
+        
+        // Determine end date and time and display them along with the duration of the overall process execution
+        long durationMillis = System.currentTimeMillis() - startTimeMillis;
+        int durationSeconds = (int) ((durationMillis / 1000) % 60);
+        int durationMinutes = (int) ((durationMillis / 1000) / 60);
+        
+        logger.log(ID, "Finished", "Commit sequences created: " + CommitSequence.getNumberOfInstances() 
+                + System.lineSeparator() + "Duration: " + durationMinutes + " min. and " + durationSeconds + " sec.",
+                MessageType.INFO);
+    }
+    
+    /**
+     * Writes the given commit sequence file name and the number of commits separated by a comma and extended by a line
+     * separator via the {@link #fileUtilities} to the {@link #summaryFile}.
+     * 
+     * @param commitSequenceFileName the name of the commit sequence file to add to the summary
+     * @param numberOfCommits the number of commits in the commit sequence of the given commit sequence file name
+     */
+    public void toSummary(String commitSequenceFileName, int numberOfCommits) {
+        String simpleCommitSequenceFileName = commitSequenceFileName.split("\\.")[0]; // Remove file extension 
+        String summaryFileContent = simpleCommitSequenceFileName + "," + numberOfCommits + System.lineSeparator();
+        fileUtilities.write(summaryFileContent);
+    }
+    
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void add(CommitSequence commitSequence) {
+        synchronized (this) {
+            worklist.add(commitSequence);
+        }
+    }
     
     /**
      * Starts this tool.
@@ -230,72 +282,5 @@ public class GitCommitSequencer implements ISequenceStorage {
         } catch (CommitSequenceCreationException e) {
             logger.logException(ID, "Creating a commit sequence failed", e);
         }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void add(CommitSequence commitSequence) {
-        synchronized (this) {
-            worklist.add(commitSequence);
-        }
-    }
-    
-    /**
-     * Writes the given content to the file specified by the given path and file name.
-     * 
-     * @param path the string representation of the path denoting the location the file shall be saved
-     * @param fileName the name of the file to be created or overridden; this name should contain a file extension
-     * @param fileContent the content which shall be written to the file
-     * @param override specifies whether to override an existing file (<code>true</code>) or not (<code>false</code>)
-     * @return <code>true</code> if creating and writing the file was successful; <code>false</code> otherwise 
-     */
-    private boolean writeFile(String path, String fileName, String fileContent, boolean override) {
-        boolean fileWrittenSuccessfully = false;
-        File file = createFile(path, fileName);
-        // Keep null-check separately to avoid false warning messages generated by inner check
-        if (file != null) {           
-            if (override || !file.exists()) {
-                Path parentDirectory = file.toPath().getParent();
-                try {
-                    if (!Files.exists(parentDirectory)) {
-                        Files.createDirectories(parentDirectory);
-                    }
-                    Files.write(file.toPath(), fileContent.getBytes());
-                    fileWrittenSuccessfully = true;
-                } catch (IOException e) {
-                    logger.logException(ID, "Writing content to file \"" + file.getAbsolutePath() + "\" failed", e);
-                }
-            } else {
-                logger.log(ID, "Writing file \"" + file.getAbsolutePath() + "\" denied",
-                        "The file already exists and overriding is forbidden",
-                        MessageType.ERROR);
-            }
-        } else {
-            logger.log(ID, "Writing to file failed", "The path or file name is empty", MessageType.ERROR);
-        }
-        return fileWrittenSuccessfully;
-    }
-    
-    /**
-     * Creates a new {@link File} based on the given path and file name.
-     * 
-     * @param path the string representation of the path denoting the location of the file to be created
-     * @param fileName the name of the file to be created
-     * @return a new file or <code>null</code> if the path or file name is empty
-     */
-    private File createFile(String path, String fileName) {
-        File file = null;
-        if (path != null && !path.isEmpty()) {
-            if (fileName != null && !fileName.isEmpty()) {
-                file = new File(path, fileName);
-            } else {
-                logger.log(ID, "Cannot create file", "No file name specified", MessageType.ERROR);
-            }
-        } else {
-            logger.log(ID, "Cannot create file", "No path for a file specified", MessageType.ERROR);
-        }
-        return file;
     }
 }

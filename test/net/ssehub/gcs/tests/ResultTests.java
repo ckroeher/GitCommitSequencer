@@ -144,7 +144,7 @@ public class ResultTests {
             
             // There must be all available commit sequences (files) TODO and one summary file
             assertEquals(ExpectedTestRepositoryCommitSequences.COMMIT_SEQUENCES.length,
-                    AllTests.TESTDATA_OUTPUT_DIRECTORY.list().length,
+                    AllTests.TESTDATA_OUTPUT_DIRECTORY.list(COMMIT_SEQUENCE_FILE_FILTER).length,
                     TEST_FAILED_PREFIX + testIdPart + testSpecificMessagePart);
             
             System.out.println(TEST_PASSED_PREFIX + testIdPart);
@@ -177,7 +177,7 @@ public class ResultTests {
             assertNull(e, TEST_FAILED_PREFIX + testIdPart + ": " + e.getMessage());
         } catch (CommitSequenceCreationException e) {
             assertNotNull(e, TEST_PASSED_PREFIX + testIdPart + "Expected CommitSequenceCreationException");
-            assertEquals(0, AllTests.TESTDATA_OUTPUT_DIRECTORY.list().length,
+            assertEquals(0, AllTests.TESTDATA_OUTPUT_DIRECTORY.list(COMMIT_SEQUENCE_FILE_FILTER).length,
                     TEST_FAILED_PREFIX + testIdPart + testSpecificMessagePart);
             System.out.println(TEST_PASSED_PREFIX + testIdPart);
         } finally {
@@ -202,8 +202,8 @@ public class ResultTests {
             GitCommitSequencer gitCommitSequencer = new GitCommitSequencer(args);
             gitCommitSequencer.run();
             
-            // There must be two files: one for the created commit sequence TODO and one summary file
-            assertEquals(1, AllTests.TESTDATA_OUTPUT_DIRECTORY.list().length,
+            // There must be two files: one for the created commit sequence and one summary file
+            assertEquals(2, AllTests.TESTDATA_OUTPUT_DIRECTORY.list().length,
                     TEST_FAILED_PREFIX + testIdPart + testSpecificMessagePart);
             
             System.out.println(TEST_PASSED_PREFIX + testIdPart);
