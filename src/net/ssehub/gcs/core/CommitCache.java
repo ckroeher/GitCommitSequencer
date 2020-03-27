@@ -15,12 +15,8 @@
 package net.ssehub.gcs.core;
 
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.RandomAccessFile;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
 
+import net.ssehub.gcs.utilities.FileUtilities;
 import net.ssehub.gcs.utilities.Logger;
 import net.ssehub.gcs.utilities.Logger.MessageType;
 
@@ -63,6 +59,12 @@ public class CommitCache {
     private Logger logger = Logger.getInstance();
     
     /**
+     * The {@link FileUtilities} for opening and closing the {@link #outputFileChannel} for writing the commits to an
+     * output file.
+     */
+    private FileUtilities fileUtilities;
+    
+    /**
      * The {@link StringBuilder} representing the actual cache to which each commit will be append with an additional
      * line separator during {@link #add(String)}. Its length is reseted to <i>0</i> during {@link #clear()}, e.g., if
      * the threshold is reached.
@@ -70,27 +72,15 @@ public class CommitCache {
     private StringBuilder commitCacheStringBuilder;
     
     /**
-     * The zero-based counter of commits currently stored in this {@link CommitCache} instance.
+     * The zero-based counter of commits currently stored in this {@link CommitCache} instance. This counter indicates
+     * when to {@link #clear()} this cache, which happens, if it reaches the {@link #CACHE_CAPACITY}.
      */
     private int commitCounter;
     
     /**
-     * The {@link RandomAccessFile} used to open the {@link #outputFileChannel} in {@link #openFileChannel()}.
-     * 
-     * @see #openFileChannel()
-     * @see #toFileChannel(String)
-     * @see #closeFileChannel()
+     * The counter for the total number of commits added to this {@link CommitCache} instance.
      */
-    private RandomAccessFile outputFileStream;
-    
-    /**
-     * The {@link FileChannel} used to write the commits of this sequence to the {@link #outputFile}.
-     * 
-     * @see #openFileChannel()
-     * @see #toFileChannel(String)
-     * @see #closeFileChannel()
-     */
-    private FileChannel outputFileChannel;
+    private int totalCommitCounter;
     
     /**
      * Constructs a new {@link CommitCache} instance.
@@ -99,9 +89,14 @@ public class CommitCache {
      * @throws CommitCacheCreationException if creating this instance fails
      */
     public CommitCache(File outputFile) throws CommitCacheCreationException {
-        openFileChannel(outputFile);
+        fileUtilities = new FileUtilities();
+        if (!fileUtilities.openFileChannel(outputFile)) {
+            throw new CommitCacheCreationException("Opening file channel for output file \"" 
+                    + outputFile.getAbsolutePath() + "\" failed");
+        }
         commitCacheStringBuilder = new StringBuilder(STANDARD_COMMIT_UNICODE_CODE_UNITS * CACHE_CAPACITY);
         commitCounter = 0;
+        totalCommitCounter = 0;
     }
     
     /**
@@ -119,12 +114,14 @@ public class CommitCache {
                     commitCacheStringBuilder.append(commit);
                     commitCacheStringBuilder.append(System.lineSeparator());
                     commitCounter++;
+                    totalCommitCounter++;
                     commitAddedSuccessfully = true;
-                }
+                } // TODO What happens if clearing fails here?
             } else {
                 commitCacheStringBuilder.append(commit);
                 commitCacheStringBuilder.append(System.lineSeparator());
                 commitCounter++;
+                totalCommitCounter++;
                 commitAddedSuccessfully = true;
             }
         } else {
@@ -141,12 +138,19 @@ public class CommitCache {
      * @return <code>true</code>, if destroying this cache was successful; <code>false</code> otherwise
      */
     public boolean destroy() {
-        boolean cacheDestroyedSuccessfully = clear() && closeFileChannel();
+        boolean cacheDestroyedSuccessfully = clear() && fileUtilities.closeFileChannel();
         logger = null;
         commitCacheStringBuilder = null;
-        outputFileStream = null;
-        outputFileChannel = null;
         return cacheDestroyedSuccessfully;
+    }
+    
+    /**
+     * Returns the total number of commits added to this {@link CommitCache} instance.
+     * 
+     * @return the total number of commits added to this {@link CommitCache} instance
+     */
+    public int getTotalNumberOfCommits() {
+        return totalCommitCounter;
     }
     
     /**
@@ -160,74 +164,13 @@ public class CommitCache {
         boolean cacheClearedSuccessfully = false;
         // Write all commits in this cache via the given file channel
         String commitCacheString = commitCacheStringBuilder.toString();
-        byte[] commitCacheStringBytes = commitCacheString.getBytes();
-        ByteBuffer commitCacheStringByteBuffer = ByteBuffer.allocate(commitCacheStringBytes.length);
-        commitCacheStringByteBuffer.put(commitCacheStringBytes);
-        commitCacheStringByteBuffer.flip();
-        try {
-            if (outputFileChannel.write(commitCacheStringByteBuffer) == commitCacheStringBytes.length) {                
-                // Clear the actual cache
-                commitCacheStringBuilder.setLength(0);
-                commitCounter = 0;
-                cacheClearedSuccessfully = true;
-            }
-        } catch (IOException e) {
-            logger.logException(ID, "Writing commit cache content to file failed", e);
+        if (fileUtilities.write(commitCacheString)) {
+            // Clear the actual cache
+            commitCacheStringBuilder.setLength(0);
+            commitCounter = 0;
+            cacheClearedSuccessfully = true;
         }
         return cacheClearedSuccessfully;
-    }
-    
-    /**
-     * Opens a file channel by creating the {@link #outputFileStream} and the {@link #outputFileChannel} based on the
-     * given output file.
-     * 
-     * @return <code>true</code>, if creating (opening) the file channel was successful; <code>false</code> otherwise
-     * @throws CommitSequenceCreationException if creating (opening) the file channel failed
-     * @see #toFileChannel(String)
-     * @see #closeFileChannel()
-     */
-    /**
-     * Opens a file channel by creating the {@link #outputFileStream} and the {@link #outputFileChannel} based on the
-     * given output file.
-     * 
-     * @param outputFile the {@link File} for which the file channel shall be opened
-     * @return <code>true</code>, if opening the file channel was successful; <code>false</code> otherwise
-     * @throws CommitCacheCreationException if the given output file does not exist
-     */
-    private boolean openFileChannel(File outputFile) throws CommitCacheCreationException {
-        boolean fileChannelOpen = false;
-        if (outputFile != null) {
-            try {
-                outputFileStream = new RandomAccessFile(outputFile.getAbsolutePath(), "rw");
-                outputFileChannel = outputFileStream.getChannel();
-                fileChannelOpen = outputFileStream != null && outputFileChannel != null;
-            } catch (FileNotFoundException e) {
-                throw new CommitCacheCreationException("Opening file channel for output file \""
-                        + outputFile.getAbsolutePath() + "\" failed", e);
-            }          
-        } else {
-            throw new CommitCacheCreationException("No output file for this cache available");
-        }
-        return fileChannelOpen;
-    }
-    
-    /**
-     * Closes the {@link #outputFileStream} and the {@link #outputFileChannel}.
-     * 
-     * @return <code>true</code>, if closing was successful; <code>false</code> otherwise
-     * @see #openFileChannel()
-     * @see #toFileChannel(String)
-     */
-    private boolean closeFileChannel() {
-        boolean fileChannelClosed = false;
-        try {
-            outputFileStream.close();
-            outputFileChannel.close();
-            fileChannelClosed = true;
-        } catch (IOException | NullPointerException e) {
-            logger.logException(ID, "Closing the file channel failed", e);
-        }
-        return fileChannelClosed;
     }
 
 }
