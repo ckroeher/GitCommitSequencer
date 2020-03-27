@@ -207,13 +207,22 @@ public class GitCommitSequencer implements ISequenceStorage {
                 worklist = new ArrayList<CommitSequence>();
                 CommitSequence commitSequence = new CommitSequence(this, repositoryDirectory, startCommit,
                         outputDirectory);
+                logger.log(ID, "Creating initial commit sequence", null, MessageType.INFO);
                 commitSequence.run();
                 toSummary(commitSequence.getOutputFileName(), commitSequence.getNumberOfCommits());
                 synchronized (this) {
-                    while (!worklist.isEmpty()) {
-                        commitSequence = worklist.remove(0);
-                        commitSequence.run();
-                        toSummary(commitSequence.getOutputFileName(), commitSequence.getNumberOfCommits());
+                    if (!worklist.isEmpty()) {
+                        logger.log(ID, "Creating commit sub-sequences", "Current number of sub-sequences to go: " 
+                                + worklist.size(), MessageType.INFO);
+                        while (!worklist.isEmpty()) {
+                            if ((worklist.size() % 100) == 0) {
+                                logger.log(ID, "Creating commit sub-sequences",
+                                        "Current number of sub-sequences to go: " + worklist.size(), MessageType.INFO);
+                            }
+                            commitSequence = worklist.remove(0);
+                            commitSequence.run();
+                            toSummary(commitSequence.getOutputFileName(), commitSequence.getNumberOfCommits());
+                        }
                     }
                 }
             } catch (CommitSequenceCreationException e) {
