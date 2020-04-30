@@ -18,7 +18,7 @@ Hence, each commit sequence represents an unique path from the latest (HEAD) com
 
 It is also possible to start with a user-defined commit, like *B2*, without moving the HEAD.
 This will result in a single commit sequence: *B2*, *A*.
-For that purpose, the tool offers an optional parameter to provide the desired commit (SHA) as the start commit.
+For that purpose, the tool offers an optional parameter to provide the desired commit (SHA) as the [start commit](https://github.com/ckroeher/GitCommitSequencer#Execution).
 
 The actual result of this tool is a set of text files and a comma-separated-values file.
 Each of the text files represents exactly one commit sequence and contains the respective commits (a single SHA per file line).
@@ -40,7 +40,7 @@ sudo apt install openjdk-13-jdk
 sudo apt-get install git
 ```
 
-The actual installation is simply to download the latest release of this tool and save it at your favorite location.
+The actual installation is simply to [download the latest release](https://github.com/ckroeher/GitCommitSequencer/releases) of this tool and save it at your favorite location.
 
 
 ## Execution
@@ -50,3 +50,8 @@ java -jar GitCommitSequencer.jar [PATH1] [PATH2] [SHA?]
     [PATH2] the mandatory absolute (file) path to the (existing) output directory
     [SHA?]  the optional start commit (SHA) 
 ```
+
+
+
+## License
+This project is licensed under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0.html).
